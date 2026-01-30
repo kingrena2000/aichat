@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>微信风格多AI聊天 (v5.0)</title>
+    <title>微信风格多AI聊天 (v5.2)</title>
     <!-- Head and Style sections remain the same -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preload" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -48,6 +48,227 @@
       }
     </style>
     <style>
+/* ========== 表情功能样式 ========== */
+.sticker-panel {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    width: 320px;
+    max-height: 350px;
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+    display: none;
+    flex-direction: column;
+    margin-bottom: 8px;
+    z-index: 20;
+}
+.sticker-panel.show { display: flex; }
+.sticker-tabs {
+    display: flex;
+    border-bottom: 1px solid #e5e5e5;
+}
+.sticker-tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.3s;
+}
+.sticker-tab.active {
+    color: #07C160;
+    border-bottom: 2px solid #07C160;
+    margin-bottom: -1px;
+}
+.sticker-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    max-height: 250px;
+}
+.sticker-section { display: none; }
+.sticker-section.active { display: block; }
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+}
+.emoji-item {
+    width: 100%;
+    aspect-ratio: 1;
+    border: none;
+    background: transparent;
+    font-size: 22px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.emoji-item:hover {
+    background: #f0f0f0;
+    transform: scale(1.15);
+}
+.sticker-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+.sticker-item {
+    aspect-ratio: 1;
+    border: 2px solid transparent;
+    background: #f5f5f5;
+    border-radius: 8px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.2s;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sticker-item:hover {
+    border-color: #07C160;
+    transform: scale(1.05);
+}
+.sticker-item img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+.sticker-item .sticker-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.6);
+    font-size: 10px;
+    padding: 2px;
+    text-align: center;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sticker-item .delete-sticker-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    background: rgba(244,53,48,0.9);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 10px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+.sticker-item:hover .delete-sticker-btn { display: flex; }
+.sticker-manage-bar {
+    border-top: 1px solid #e5e5e5;
+    padding: 8px;
+    display: flex;
+    gap: 6px;
+}
+.sticker-manage-btn {
+    flex: 1;
+    padding: 8px;
+    border: 1px dashed #ccc;
+    background: transparent;
+    color: #666;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.3s;
+}
+.sticker-manage-btn:hover {
+    border-color: #07C160;
+    color: #07C160;
+    background: rgba(7,193,96,0.05);
+}
+.sticker-tool-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f5f5f5;
+    color: #666;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.sticker-tool-btn:hover { background: #e5e5e5; }
+.sticker-tool-btn.active { background: #07C160; color: white; }
+.message-sticker {
+    max-width: 120px;
+    max-height: 120px;
+    border-radius: 6px;
+    vertical-align: middle;
+    cursor: pointer;
+}
+.message-sticker:hover { transform: scale(1.03); }
+.sticker-upload-preview-box {
+    width: 80px;
+    height: 80px;
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.sticker-upload-preview-box:hover { border-color: #07C160; }
+.sticker-upload-preview-box img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+.import-format-hint {
+    background: rgba(7,193,96,0.1);
+    border: 1px solid rgba(7,193,96,0.3);
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 10px;
+}
+.import-format-hint-title {
+    font-size: 12px;
+    color: #07C160;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+.import-format-hint-code {
+    font-family: monospace;
+    font-size: 11px;
+    color: #666;
+    background: #f9f9f9;
+    padding: 8px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+.sticker-empty-state {
+    text-align: center;
+    padding: 30px 15px;
+    color: #999;
+}
+.sticker-empty-state i { font-size: 32px; margin-bottom: 10px; display: block; opacity: 0.5; }
+.sticker-empty-state p { font-size: 12px; }
+
       html, body { height: 100%; overflow: hidden; -webkit-overflow-scrolling: touch; }
       @supports (padding-bottom: constant(safe-area-inset-bottom)) or (padding-bottom: env(safe-area-inset-bottom)) {
         .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
@@ -65,13 +286,118 @@
 <div class="h-screen overflow-hidden">
     <!-- HTML structure remains identical -->
     <div id="chatListPage" class="h-full flex flex-col"><header class="bg-white border-b border-wechat-darkGray py-3 px-4 flex items-center justify-between shadow-sm z-10"><h1 class="text-lg font-semibold">AI聊天助手</h1><button id="addChatBtn" class="text-wechat-text p-2 rounded-full hover:bg-wechat-gray transition-colors"><i class="fa fa-plus"></i></button></header><div id="chatListContainer" class="flex-1 chat-list-container bg-white"><div id="emptyChatList" class="flex flex-col items-center justify-center h-full text-wechat-lightText py-10"><i class="fa fa-comments-o text-4xl mb-3 opacity-50"></i><p class="text-sm">暂无聊天对象，点击右上角"+"添加</p></div></div><nav class="bg-white border-t border-wechat-darkGray flex nav-safe-area"><button id="chatNavBtn" class="flex-1 py-3 flex flex-col items-center justify-center nav-item-active"><i class="fa fa-comments text-lg"></i><span class="text-xs mt-1">聊天</span></button><button id="diaryNavBtn" class="flex-1 py-3 flex flex-col items-center justify-center text-wechat-lightText"><i class="fa fa-book text-lg"></i><span class="text-xs mt-1">日记</span></button><button id="settingsNavBtn" class="flex-1 py-3 flex flex-col items-center justify-center text-wechat-lightText"><i class="fa fa-cog text-lg"></i><span class="text-xs mt-1">设置</span></button></nav></div>
-    <div id="chatPage" class="chat-page hidden"><header class="bg-white border-b border-wechat-darkGray py-3 px-4 flex items-center justify-between shadow-sm z-10"><div class="flex items-center"><button id="backToChatListBtn" class="text-wechat-text p-2 mr-2"><i class="fa fa-arrow-left"></i></button><div class="flex items-center"><div id="chatPageAvatar" class="w-8 h-8 rounded-full overflow-hidden mr-2"></div><h1 id="chatPageTitle" class="text-lg font-semibold">聊天对象</h1></div></div><button id="chatPageMoreBtn" class="text-wechat-text p-2 rounded-full hover:bg-wechat-gray transition-colors"><i class="fa fa-ellipsis-v"></i></button></header><main class="chat-main"><div id="chatPageTypingIndicator" class="typing-indicator"><span id="chatPageTypingText">正在输入中...</span></div><div id="chatPageContainer" class="chat-content p-4 bg-[#ECE5DD]"></div><div class="chat-input-container bg-white border-t border-wechat-darkGray p-3 safe-area-bottom"><div class="flex items-center gap-2"><textarea id="chatPageMessageInput" class="flex-1 border border-wechat-darkGray rounded-full px-4 py-2 text-sm resize-none focus:input-focus transition-all" placeholder="输入消息..." rows="1"></textarea><button id="chatPageSendBtn" class="w-10 h-10 rounded-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-paper-plane"></i></button></div></div></main></div>
+    <div id="chatPage" class="chat-page hidden"><header class="bg-white border-b border-wechat-darkGray py-3 px-4 flex items-center justify-between shadow-sm z-10"><div class="flex items-center"><button id="backToChatListBtn" class="text-wechat-text p-2 mr-2"><i class="fa fa-arrow-left"></i></button><div class="flex items-center"><div id="chatPageAvatar" class="w-8 h-8 rounded-full overflow-hidden mr-2"></div><h1 id="chatPageTitle" class="text-lg font-semibold">聊天对象</h1></div></div><button id="chatPageMoreBtn" class="text-wechat-text p-2 rounded-full hover:bg-wechat-gray transition-colors"><i class="fa fa-ellipsis-v"></i></button></header><main class="chat-main"><div id="chatPageTypingIndicator" class="typing-indicator"><span id="chatPageTypingText">正在输入中...</span></div><div id="chatPageContainer" class="chat-content p-4 bg-[#ECE5DD]"></div>
+
+<div class="chat-input-container bg-white border-t border-wechat-darkGray p-3 safe-area-bottom">
+    <div class="flex items-center gap-2" style="position: relative;">
+        <!-- 表情面板 -->
+        <div class="sticker-panel" id="stickerPanel">
+            <div class="sticker-tabs">
+                <button class="sticker-tab active" id="emojiTabBtn">😀 Emoji</button>
+                <button class="sticker-tab" id="customStickerTabBtn">🖼️ 表情图</button>
+            </div>
+            <div class="sticker-content">
+                <div class="sticker-section active" id="emojiSection">
+                    <div class="emoji-grid" id="emojiGrid"></div>
+                </div>
+                <div class="sticker-section" id="customStickerSection">
+                    <div class="sticker-grid" id="stickerGrid"></div>
+                    <div class="sticker-empty-state" id="stickerEmptyHint" style="display:none;">
+                        <i class="fa fa-picture-o"></i>
+                        <p>还没有表情图<br>点击下方按钮添加</p>
+                    </div>
+                </div>
+            </div>
+            <div class="sticker-manage-bar">
+                <button class="sticker-manage-btn" id="addStickerUploadBtn"><i class="fa fa-upload"></i> 上传</button>
+                <button class="sticker-manage-btn" id="addStickerUrlBtn"><i class="fa fa-link"></i> URL</button>
+                <button class="sticker-manage-btn" id="addStickerImportBtn"><i class="fa fa-download"></i> 导入</button>
+            </div>
+        </div>
+        
+        <button class="sticker-tool-btn" id="stickerToggleBtn"><i class="fa fa-smile-o"></i></button>
+        <textarea id="chatPageMessageInput" class="flex-1 border border-wechat-darkGray rounded-full px-4 py-2 text-sm resize-none focus:input-focus transition-all" placeholder="输入消息... 用 :名称: 发表情" rows="1"></textarea>
+        <button id="chatPageSendBtn" class="w-10 h-10 rounded-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-paper-plane"></i></button>
+    </div>
+</div>
+</main></div>
+
     <div id="settingsPage" class="fixed inset-0 bg-white z-20 transform translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto safe-area-bottom"><div class="p-4 border-b border-wechat-darkGray flex items-center justify-between sticky top-0 bg-white z-10"><h2 class="text-lg font-semibold">设置</h2><button id="closeSettingsBtn" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button></div><div class="p-4 space-y-8 pb-20"><div class="space-y-6"><h3 class="text-base font-semibold text-wechat-text border-b border-wechat-darkGray pb-2">用户信息设置</h3><div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">你的头像</label><div class="flex flex-col items-center"><div class="relative mb-3"><img id="userAvatarPreview" class="avatar-preview" alt="你的头像预览"><i id="userAvatarIcon" class="fa fa-user absolute inset-0 flex items-center justify-center text-white text-xl bg-gray-400 rounded-full"></i></div><div class="flex gap-3 w-full max-w-xs"><label class="flex-1 text-center"><input type="file" id="userAvatarUpload" accept="image/*" class="hidden"><button type="button" class="avatar-upload-btn" onclick="document.getElementById('userAvatarUpload').click()"><i class="fa fa-upload mr-1"></i> 本地上传</button></label><button type="button" class="flex-1 avatar-upload-btn" id="userAvatarUrlBtn"><i class="fa fa-link mr-1"></i> 输入URL</button></div><div id="userAvatarUrlContainer" class="w-full max-w-xs mt-3 hidden"><input type="url" id="userAvatarUrl" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="输入头像图片URL"><div class="flex gap-2 mt-2"><button type="button" class="flex-1 bg-wechat-green text-white py-2 rounded-lg text-sm" id="userAvatarUrlConfirm">确认</button><button type="button" class="flex-1 bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm" id="userAvatarUrlCancel">取消</button></div></div></div></div><div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">你的名称<span class="text-xs text-wechat-lightText ml-1">(发送给API使用)</span></label><input type="text" id="userName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="输入你的名称" value="user"></div></div><div class="space-y-6"><h3 class="text-base font-semibold text-wechat-text border-b border-wechat-darkGray pb-2">API与模型配置</h3><form id="settingsForm" class="space-y-4"><div><label class="block text-sm font-medium text-wechat-text mb-1">API Base URL</label><input type="url" id="baseUrl" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1"></div><div><label class="block text-sm font-medium text-wechat-text mb-1">API Key</label><input type="password" id="apiKey" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="sk-..."></div>
 <div><label class="block text-sm font-medium text-wechat-text mb-1">模型名称</label><div class="flex gap-2"><select id="modelName" class="flex-1 border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus"></select><button type="button" id="refreshModelsBtn" class="bg-wechat-green/10 text-wechat-green px-3 py-2 rounded-lg hover:bg-wechat-green/20 transition-colors"><i class="fa fa-refresh"></i></button></div><p class="text-xs text-wechat-lightText mt-1">填写API地址和Key后，点击刷新按钮获取可用模型列表</p></div>
 <div><label for="apiTemperature" class="block text-sm font-medium text-wechat-text mb-1">模型温度 (Temperature)</label><input type="number" id="apiTemperature" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如: 0.7" value="0.7" min="0" max="2" step="0.1"><p class="text-xs text-wechat-lightText mt-1">控制回答的随机性。值越高(如 1.2)回答越有创意，值越低(如 0.2)回答越稳定。默认 0.7。</p></div><div><label class="block text-sm font-medium text-wechat-text mb-1">单次上下文轮次 (短期记忆)</label><input type="number" id="historyTurns" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如: 10" value="10" min="0"><p class="text-xs text-wechat-lightText mt-1">每次请求API时，读取最近的N轮对话。0或空表示不限制。</p></div><div><label class="block text-sm font-medium text-wechat-text mb-1">日记生成频率 (轮)</label><input type="number" id="diaryGenerationTurns" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如: 30" value="30" min="0"><p class="text-xs text-wechat-lightText mt-1">每隔N轮对话 (N次AI回复)，自动生成一篇日记。0表示禁用。</p></div><div><label for="globalSystemPrompt" class="block text-sm font-medium text-wechat-text mb-1">全局系统提示词</label><textarea id="globalSystemPrompt" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm resize-none focus:input-focus h-48" placeholder="定义全局规则，对所有聊天对象生效..."></textarea><p class="text-xs text-wechat-lightText mt-1">此提示词拥有最高优先级，将与每个聊天对象的人设提示词合并后发送给AI。</p></div><button type="submit" class="w-full bg-wechat-green text-white py-3 rounded-lg font-medium hover:bg-wechat-green/90 transition-colors">保存所有设置</button></form></div><div class="space-y-6"><h3 class="text-base font-semibold text-wechat-text border-b border-wechat-darkGray pb-2">数据备份与恢复</h3><p class="text-sm text-wechat-lightText">您可以将全部聊天数据（包含聊天记录、对象设定、日记、全局配置和头像）备份到一个压缩文件(`.zip`)中。</p><div class="flex gap-3"><button type="button" id="backupDataBtn" class="flex-1 bg-wechat-green/10 text-wechat-green py-3 rounded-lg font-medium hover:bg-wechat-green/20 transition-colors"><i class="fa fa-download mr-2"></i><span>备份全部数据</span></button><button type="button" id="restoreDataBtn" class="flex-1 bg-wechat-green/10 text-wechat-green py-3 rounded-lg font-medium hover:bg-wechat-green/20 transition-colors"><i class="fa fa-upload mr-2"></i><span>从文件恢复</span></button><input type="file" id="restoreFileInput" class="hidden" accept=".zip"></div><div class="text-xs text-wechat-lightText space-y-1"><p class="flex items-start"><i class="fa fa-info-circle mr-2 mt-0.5 flex-shrink-0"></i><span class="font-semibold">关于备份路径：</span>点击备份后，浏览器将自动下载文件。该文件通常会保存到您浏览器设置的**默认“下载”文件夹**中。</p><p class="flex items-start"><i class="fa fa-lightbulb-o mr-2 mt-0.5 flex-shrink-0"></i><span class="font-semibold">恢复操作提示：</span>点击恢复后，请在弹出的文件选择窗口中，**手动导航到您的“下载”文件夹**来找到之前的备份文件。</p></div></div><div class="space-y-6"><h3 class="text-base font-semibold text-wechat-text border-b border-wechat-darkGray pb-2">诊断与调试</h3><p class="text-sm text-wechat-lightText">如果遇到功能异常，可以查看内部日志以帮助定位问题。</p><div class="flex gap-3"><button type="button" id="viewLogsBtn" class="flex-1 bg-wechat-green/10 text-wechat-green py-3 rounded-lg font-medium hover:bg-wechat-green/20 transition-colors"><i class="fa fa-file-text-o mr-2"></i>查看诊断日志</button><button type="button" id="clearLogsBtn" class="flex-1 bg-wechat-red/10 text-wechat-red py-3 rounded-lg font-medium hover:bg-wechat-red/20 transition-colors"><i class="fa fa-eraser mr-2"></i>清空日志</button></div></div></div></div>
     <div id="diaryListPage" class="fixed inset-0 bg-white z-20 transform translate-x-full transition-transform duration-300 ease-in-out h-full flex flex-col"><header class="bg-white border-b border-wechat-darkGray py-3 px-4 flex items-center justify-between shadow-sm z-10"><h1 class="text-lg font-semibold">日记本</h1><button id="closeDiaryListPageBtn" class="text-wechat-text p-2 rounded-full hover:bg-wechat-gray transition-colors"><i class="fa fa-times"></i></button></header><div id="diaryListContainer" class="flex-1 diary-list-container bg-white"></div></div>
     <div id="diaryDetailPage" class="fixed inset-0 bg-white z-30 transform translate-x-full transition-transform duration-300 ease-in-out h-full flex flex-col"><header class="bg-white border-b border-wechat-darkGray py-3 px-4 flex items-center justify-between shadow-sm z-10"><div class="flex items-center"><button id="backToDiaryListBtn" class="text-wechat-text p-2 mr-2"><i class="fa fa-arrow-left"></i></button><h1 id="diaryDetailPageTitle" class="text-lg font-semibold"></h1></div><div class="flex items-center gap-2"><button id="resetDiaryPtrBtn" title="如果总结功能失效，请先点击此按钮" class="bg-wechat-red/10 text-wechat-red text-xs font-semibold py-1 px-3 rounded-full hover:bg-wechat-red/20 transition-colors"><i class="fa fa-history mr-1"></i>重置指针</button><button id="manualDiaryBtn" class="bg-wechat-green/10 text-wechat-green text-xs font-semibold py-1 px-3 rounded-full hover:bg-wechat-green/20 transition-colors"><i class="fa fa-pencil-square-o mr-1"></i>手动总结</button></div></header><div id="diaryEntriesContainer" class="flex-1 diary-entries-container p-4 bg-diary-bg/50"></div></div>
     <div id="editDiaryEntryModal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center hidden"><div class="bg-white rounded-lg w-[90%] max-w-lg"><div class="p-4 border-b border-wechat-darkGray flex items-center justify-between"><h2 class="text-lg font-semibold">编辑日记</h2><button id="closeEditDiaryModalBtn" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button></div><div class="p-4"><textarea id="editDiaryEntryText" class="w-full border border-wechat-darkGray rounded-lg p-3 text-sm focus:input-focus" rows="10"></textarea></div><div class="p-4 border-t border-wechat-darkGray flex justify-end gap-3"><button id="cancelEditDiaryBtn" class="bg-wechat-gray text-wechat-text py-2 px-4 rounded-lg text-sm">取消</button><button id="saveEditDiaryBtn" class="bg-wechat-green text-white py-2 px-4 rounded-lg text-sm">保存</button></div></div></div>
+<!-- 添加表情模态框 -->
+<div id="addStickerModal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg w-[90%] max-w-md">
+        <div class="p-4 border-b border-wechat-darkGray flex items-center justify-between">
+            <h2 class="text-lg font-semibold" id="addStickerModalTitle">添加表情图</h2>
+            <button id="closeAddStickerModalBtn" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button>
+        </div>
+        <div class="p-4">
+            <!-- 上传方式 -->
+            <div id="stickerUploadSection" class="sticker-add-section">
+                <div class="sticker-upload-preview-box" id="stickerUploadPreviewBox">
+                    <span id="stickerUploadPlaceholder" style="color:#999;font-size:24px;">➕</span>
+                    <img src="" alt="" id="stickerUploadPreviewImg" style="display:none;">
+                </div>
+                <input type="file" id="stickerFileInput" accept="image/*" style="display:none;">
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-wechat-text mb-1">表情名称 *</label>
+                        <input type="text" id="uploadStickerName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如：开心">
+                        <p class="text-xs text-wechat-lightText mt-1">使用 :名称: 即可发送此表情</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- URL方式 -->
+            <div id="stickerUrlSection" class="sticker-add-section" style="display:none;">
+                <div class="sticker-upload-preview-box" id="stickerUrlPreviewBox">
+                    <span id="stickerUrlPlaceholder" style="color:#999;font-size:24px;">🔗</span>
+                    <img src="" alt="" id="stickerUrlPreviewImg" style="display:none;">
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-wechat-text mb-1">图片URL *</label>
+                        <input type="url" id="stickerUrlInput" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="https://example.com/sticker.gif">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-wechat-text mb-1">表情名称 *</label>
+                        <input type="text" id="urlStickerName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如：开心">
+                        <p class="text-xs text-wechat-lightText mt-1">使用 :名称: 即可发送此表情</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 批量导入方式 -->
+            <div id="stickerImportSection" class="sticker-add-section" style="display:none;">
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-wechat-text mb-1">批量导入</label>
+                        <textarea id="stickerImportText" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" rows="6" placeholder="每行一个表情，格式：名称:URL"></textarea>
+                    </div>
+                    <div class="import-format-hint">
+                        <div class="import-format-hint-title">📋 导入格式示例</div>
+                        <div class="import-format-hint-code">怨念:https://files.catbox.moe/q72pav.gif
+开心:https://example.com/happy.gif
+难过:https://example.com/sad.png</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="p-4 border-t border-wechat-darkGray flex justify-end gap-3">
+            <button id="cancelAddStickerBtn" class="bg-wechat-gray text-wechat-text py-2 px-4 rounded-lg text-sm">取消</button>
+            <button id="confirmAddStickerBtn" class="bg-wechat-green text-white py-2 px-4 rounded-lg text-sm">添加表情</button>
+        </div>
+    </div>
+</div>
+
+<!-- 表情图片全屏预览 -->
+<div id="stickerFullViewModal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center cursor-zoom-out">
+    <img src="" alt="" id="stickerFullViewImg" style="max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;">
+</div>
     <div id="addChatModal" class="fixed inset-0 bg-black/50 z-30 flex items-center justify-center hidden"><div class="bg-white rounded-lg w-[90%] max-w-md max-h-[85vh] overflow-y-auto safe-area-bottom"><div class="p-4 border-b border-wechat-darkGray flex items-center justify-between sticky top-0 bg-white z-10"><h2 class="text-lg font-semibold">新增聊天对象</h2><button id="closeAddChatModalBtn" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button></div><div class="p-4 space-y-6 pb-10"><div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">聊天对象头像</label><div class="flex flex-col items-center"><div class="relative mb-3"><img id="newChatAvatarPreview" class="avatar-preview" alt="头像预览"><i id="newChatAvatarIcon" class="fa fa-robot absolute inset-0 flex items-center justify-center text-white text-xl bg-wechat-green rounded-full"></i></div><div class="flex gap-3 w-full max-w-xs"><label class="flex-1 text-center"><input type="file" id="newChatAvatarUpload" accept="image/*" class="hidden"><button type="button" class="avatar-upload-btn" onclick="document.getElementById('newChatAvatarUpload').click()"><i class="fa fa-upload mr-1"></i> 本地上传</button></label><button type="button" class="flex-1 avatar-upload-btn" id="newChatAvatarUrlBtn"><i class="fa fa-link mr-1"></i> 输入URL</button></div><div id="newChatAvatarUrlContainer" class="w-full max-w-xs mt-3 hidden"><input type="url" id="newChatAvatarUrl" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="输入头像图片URL"><div class="flex gap-2 mt-2"><button type="button" class="flex-1 bg-wechat-green text-white py-2 rounded-lg text-sm" id="newChatAvatarUrlConfirm">确认</button><button type="button" class="flex-1 bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm" id="newChatAvatarUrlCancel">取消</button></div></div></div></div><div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">聊天对象名称</label><input type="text" id="newChatName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如：编程高手" value="AI助手"></div><div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">人设提示词</label><textarea id="newChatSystemPrompt" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm resize-none focus:input-focus h-32" placeholder="描述AI的角色、性格、说话风格..."></textarea></div><button type="button" id="createChatBtn" class="w-full bg-wechat-green text-white py-3 rounded-lg font-medium hover:bg-wechat-green/90 transition-colors">创建聊天</button></div></div></div>
     <div id="chatDetailPage" class="fixed inset-0 bg-white z-30 flex flex-col h-full transform translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto safe-area-bottom"><header class="bg-white border-b border-wechat-darkGray py-3 px-4 flex items-center justify-between shadow-sm z-10"><button id="backToChatPageBtn" class="text-wechat-text p-2 mr-2"><i class="fa fa-arrow-left"></i></button><h2 class="text-lg font-semibold">聊天对象详情</h2><button id="deleteChatBtn" class="text-wechat-red p-2 mr-2" title="从列表移除"><i class="fa fa-trash"></i></button></header><div class="flex-1 overflow-y-auto pb-20"><div class="chat-detail-header"><div class="relative mb-3"><img id="editChatAvatarPreview" class="avatar-preview" alt="头像预览"><i id="editChatAvatarIcon" class="fa fa-robot absolute inset-0 flex items-center justify-center text-white text-xl bg-wechat-green rounded-full"></i></div><button type="button" id="editAvatarBtn" class="text-wechat-green text-sm"><i class="fa fa-camera mr-1"></i> 更换头像</button></div><div class="p-4 space-y-6"><div id="editAvatarContainer" class="space-y-3 hidden"><div class="flex gap-3 w-full max-w-xs mx-auto"><label class="flex-1 text-center"><input type="file" id="editChatAvatarUpload" accept="image/*" class="hidden"><button type="button" class="avatar-upload-btn" onclick="document.getElementById('editChatAvatarUpload').click()"><i class="fa fa-upload mr-1"></i> 本地上传</button></label><button type="button" class="flex-1 avatar-upload-btn" id="editChatAvatarUrlBtn"><i class="fa fa-link mr-1"></i> 输入URL</button></div><div id="editChatAvatarUrlContainer" class="w-full max-w-xs mx-auto hidden"><input type="url" id="editChatAvatarUrl" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="输入头像图片URL"><div class="flex gap-2 mt-2"><button type="button" class="flex-1 bg-wechat-green text-white py-2 rounded-lg text-sm" id="editChatAvatarUrlConfirm">确认</button><button type="button" class="flex-1 bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm" id="editChatAvatarUrlCancel">取消</button></div></div><button type="button" class="w-full max-w-xs mx-auto bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm" id="cancelEditAvatarBtn">取消更换</button></div><div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">聊天对象名称</label><input type="text" id="editChatName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="输入聊天对象的名称"></div><div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">人设提示词</label><textarea id="editChatSystemPrompt" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm resize-none focus:input-focus h-32" placeholder="描述AI的角色、性格、说话风格..."></textarea></div><button type="button" id="saveChatDetailBtn" class="w-full bg-wechat-green text-white py-3 rounded-lg font-medium hover:bg-wechat-green/90 transition-colors">保存修改</button></div></div></div>
     <div id="confirmDeleteModal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center hidden"><div class="bg-white rounded-lg w-[80%] max-w-sm p-4"><h3 class="text-lg font-semibold text-center mb-4">从列表移除</h3><p class="text-center text-wechat-text mb-6">确定要从列表中移除此聊天吗？您之后可以通过备份文件恢复。</p><div class="flex gap-3"><button type="button" id="cancelDeleteBtn" class="flex-1 bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm">取消</button><button type="button" id="confirmDeleteBtn" class="flex-1 bg-wechat-red text-white py-2 rounded-lg text-sm">确认移除</button></div></div></div>
@@ -96,11 +422,48 @@ const aichat_default_config = {
     globalSystemPrompt: `请严格遵守以下规则：\n1. 你的所有思考、self-critique、计划、plan等内心戏都必须包含在 <think> 和 </think> 标签之间，且<think>标签必须在你的回答的最前面。\n2. 你必须在think之后再给出对用户的直接回答。\n3. 给用户的直接回答中绝对不能出现<think>标签及其中内容。`
 };
 
-const appData = { chatObjects: [], activeChatId: null, apiConfig: { ...aichat_default_config }, userInfo: { name: 'user', avatar: { type: 'default', url: '' } }, newChatTempData: { avatar: { type: 'default', url: '' } }, editChatTempData: { chatId: null, avatar: { type: 'default', url: '' } }, userAvatarTempData: { type: 'default', url: '' }, contextMenuData: { messageIndex: null }, restoreTempData: { zip: null, parsedChats: [] }, diaryView: { activeChatId: null, editingEntryId: null }, isGeneratingDiary: false, logs: [], };
+const appData = { chatObjects: [], activeChatId: null, apiConfig: { ...aichat_default_config }, userInfo: { name: 'user', avatar: { type: 'default', url: '' } }, newChatTempData: { avatar: { type: 'default', url: '' } }, editChatTempData: { chatId: null, avatar: { type: 'default', url: '' } }, userAvatarTempData: { type: 'default', url: '' }, contextMenuData: { messageIndex: null }, restoreTempData: { zip: null, parsedChats: [] }, diaryView: { activeChatId: null, editingEntryId: null }, isGeneratingDiary: false, logs: [],stickers: [],  // 表情图数据 { id, name, url }
+stickerTempData: { mode: 'upload', uploadData: null },  // 临时数据
+ };
+
 const DOM = { chatListPage: document.getElementById('chatListPage'), chatListContainer: document.getElementById('chatListContainer'), emptyChatList: document.getElementById('emptyChatList'), addChatBtn: document.getElementById('addChatBtn'), chatNavBtn: document.getElementById('chatNavBtn'), diaryNavBtn: document.getElementById('diaryNavBtn'), settingsNavBtn: document.getElementById('settingsNavBtn'), chatPage: document.getElementById('chatPage'), backToChatListBtn: document.getElementById('backToChatListBtn'), chatPageAvatar: document.getElementById('chatPageAvatar'), chatPageTitle: document.getElementById('chatPageTitle'), chatPageMoreBtn: document.getElementById('chatPageMoreBtn'), chatPageContainer: document.getElementById('chatPageContainer'), chatPageMessageInput: document.getElementById('chatPageMessageInput'), chatPageSendBtn: document.getElementById('chatPageSendBtn'), chatPageTypingIndicator: document.getElementById('chatPageTypingIndicator'), chatPageTypingText: document.getElementById('chatPageTypingText'), settingsPage: document.getElementById('settingsPage'), closeSettingsBtn: document.getElementById('closeSettingsBtn'), settingsForm: document.getElementById('settingsForm'), baseUrl: document.getElementById('baseUrl'), apiKey: document.getElementById('apiKey'), modelName: document.getElementById('modelName'), refreshModelsBtn: document.getElementById('refreshModelsBtn'),
 apiTemperature: document.getElementById('apiTemperature'), historyTurns: document.getElementById('historyTurns'), globalSystemPrompt: document.getElementById('globalSystemPrompt'), userName: document.getElementById('userName'), userAvatarPreview: document.getElementById('userAvatarPreview'), userAvatarIcon: document.getElementById('userAvatarIcon'), userAvatarUpload: document.getElementById('userAvatarUpload'), userAvatarUrlBtn: document.getElementById('userAvatarUrlBtn'), userAvatarUrlContainer: document.getElementById('userAvatarUrlContainer'), userAvatarUrl: document.getElementById('userAvatarUrl'), userAvatarUrlConfirm: document.getElementById('userAvatarUrlConfirm'), userAvatarUrlCancel: document.getElementById('userAvatarUrlCancel'), addChatModal: document.getElementById('addChatModal'), closeAddChatModalBtn: document.getElementById('closeAddChatModalBtn'), newChatAvatarPreview: document.getElementById('newChatAvatarPreview'), newChatAvatarIcon: document.getElementById('newChatAvatarIcon'), newChatAvatarUpload: document.getElementById('newChatAvatarUpload'), newChatAvatarUrlBtn: document.getElementById('newChatAvatarUrlBtn'), newChatAvatarUrlContainer: document.getElementById('newChatAvatarUrlContainer'), newChatAvatarUrl: document.getElementById('newChatAvatarUrl'), newChatAvatarUrlConfirm: document.getElementById('newChatAvatarUrlConfirm'), newChatAvatarUrlCancel: document.getElementById('newChatAvatarUrlCancel'), newChatName: document.getElementById('newChatName'), newChatSystemPrompt: document.getElementById('newChatSystemPrompt'), createChatBtn: document.getElementById('createChatBtn'), chatDetailPage: document.getElementById('chatDetailPage'), backToChatPageBtn: document.getElementById('backToChatPageBtn'), deleteChatBtn: document.getElementById('deleteChatBtn'), editChatAvatarPreview: document.getElementById('editChatAvatarPreview'), editChatAvatarIcon: document.getElementById('editChatAvatarIcon'), editAvatarBtn: document.getElementById('editAvatarBtn'), editAvatarContainer: document.getElementById('editAvatarContainer'), editChatAvatarUpload: document.getElementById('editChatAvatarUpload'), editChatAvatarUrlBtn: document.getElementById('editChatAvatarUrlBtn'), editChatAvatarUrlContainer: document.getElementById('editChatAvatarUrlContainer'), editChatAvatarUrl: document.getElementById('editChatAvatarUrl'), editChatAvatarUrlConfirm: document.getElementById('editChatAvatarUrlConfirm'), editChatAvatarUrlCancel: document.getElementById('cancelEditAvatarBtn'), editChatName: document.getElementById('editChatName'), editChatSystemPrompt: document.getElementById('editChatSystemPrompt'), saveChatDetailBtn: document.getElementById('saveChatDetailBtn'), confirmDeleteModal: document.getElementById('confirmDeleteModal'), cancelDeleteBtn: document.getElementById('cancelDeleteBtn'), confirmDeleteBtn: document.getElementById('confirmDeleteBtn'), messageContextMenu: document.getElementById('messageContextMenu'), regenerateMessageBtn: document.getElementById('regenerateMessageBtn'), editMessageBtn: document.getElementById('editMessageBtn'),
 deleteMessageBtn: document.getElementById('deleteMessageBtn'),resendMessageBtn: document.getElementById('resendMessageBtn'),
-backupDataBtn: document.getElementById('backupDataBtn'), restoreDataBtn: document.getElementById('restoreDataBtn'), restoreFileInput: document.getElementById('restoreFileInput'), restoreModal: document.getElementById('restoreModal'), closeRestoreModalBtn: document.getElementById('closeRestoreModalBtn'), cancelRestoreBtn: document.getElementById('cancelRestoreBtn'), confirmRestoreBtn: document.getElementById('confirmRestoreBtn'), restoreChatList: document.getElementById('restoreChatList'), restoreSelectAll: document.getElementById('restoreSelectAll'), diaryGenerationTurns: document.getElementById('diaryGenerationTurns'), diaryListPage: document.getElementById('diaryListPage'), closeDiaryListPageBtn: document.getElementById('closeDiaryListPageBtn'), diaryListContainer: document.getElementById('diaryListContainer'), diaryDetailPage: document.getElementById('diaryDetailPage'), backToDiaryListBtn: document.getElementById('backToDiaryListBtn'), diaryDetailPageTitle: document.getElementById('diaryDetailPageTitle'), diaryEntriesContainer: document.getElementById('diaryEntriesContainer'), manualDiaryBtn: document.getElementById('manualDiaryBtn'), resetDiaryPtrBtn: document.getElementById('resetDiaryPtrBtn'), editDiaryEntryModal: document.getElementById('editDiaryEntryModal'), closeEditDiaryModalBtn: document.getElementById('closeEditDiaryModalBtn'), editDiaryEntryText: document.getElementById('editDiaryEntryText'), cancelEditDiaryBtn: document.getElementById('cancelEditDiaryBtn'), saveEditDiaryBtn: document.getElementById('saveEditDiaryBtn'), viewLogsBtn: document.getElementById('viewLogsBtn'), clearLogsBtn: document.getElementById('clearLogsBtn'), logModal: document.getElementById('logModal'), closeLogModalBtn: document.getElementById('closeLogModalBtn'), logOutput: document.getElementById('logOutput'), };
+backupDataBtn: document.getElementById('backupDataBtn'), restoreDataBtn: document.getElementById('restoreDataBtn'), restoreFileInput: document.getElementById('restoreFileInput'), restoreModal: document.getElementById('restoreModal'), closeRestoreModalBtn: document.getElementById('closeRestoreModalBtn'), cancelRestoreBtn: document.getElementById('cancelRestoreBtn'), confirmRestoreBtn: document.getElementById('confirmRestoreBtn'), restoreChatList: document.getElementById('restoreChatList'), restoreSelectAll: document.getElementById('restoreSelectAll'), diaryGenerationTurns: document.getElementById('diaryGenerationTurns'), diaryListPage: document.getElementById('diaryListPage'), closeDiaryListPageBtn: document.getElementById('closeDiaryListPageBtn'), diaryListContainer: document.getElementById('diaryListContainer'), diaryDetailPage: document.getElementById('diaryDetailPage'), backToDiaryListBtn: document.getElementById('backToDiaryListBtn'), diaryDetailPageTitle: document.getElementById('diaryDetailPageTitle'), diaryEntriesContainer: document.getElementById('diaryEntriesContainer'), manualDiaryBtn: document.getElementById('manualDiaryBtn'), resetDiaryPtrBtn: document.getElementById('resetDiaryPtrBtn'), editDiaryEntryModal: document.getElementById('editDiaryEntryModal'), closeEditDiaryModalBtn: document.getElementById('closeEditDiaryModalBtn'), editDiaryEntryText: document.getElementById('editDiaryEntryText'), cancelEditDiaryBtn: document.getElementById('cancelEditDiaryBtn'), saveEditDiaryBtn: document.getElementById('saveEditDiaryBtn'), viewLogsBtn: document.getElementById('viewLogsBtn'), clearLogsBtn: document.getElementById('clearLogsBtn'), logModal: document.getElementById('logModal'), closeLogModalBtn: document.getElementById('closeLogModalBtn'), logOutput: document.getElementById('logOutput'), // 表情功能DOM
+stickerPanel: document.getElementById('stickerPanel'),
+stickerToggleBtn: document.getElementById('stickerToggleBtn'),
+emojiTabBtn: document.getElementById('emojiTabBtn'),
+customStickerTabBtn: document.getElementById('customStickerTabBtn'),
+emojiSection: document.getElementById('emojiSection'),
+customStickerSection: document.getElementById('customStickerSection'),
+emojiGrid: document.getElementById('emojiGrid'),
+stickerGrid: document.getElementById('stickerGrid'),
+stickerEmptyHint: document.getElementById('stickerEmptyHint'),
+addStickerUploadBtn: document.getElementById('addStickerUploadBtn'),
+addStickerUrlBtn: document.getElementById('addStickerUrlBtn'),
+addStickerImportBtn: document.getElementById('addStickerImportBtn'),
+addStickerModal: document.getElementById('addStickerModal'),
+addStickerModalTitle: document.getElementById('addStickerModalTitle'),
+closeAddStickerModalBtn: document.getElementById('closeAddStickerModalBtn'),
+stickerUploadSection: document.getElementById('stickerUploadSection'),
+stickerUrlSection: document.getElementById('stickerUrlSection'),
+stickerImportSection: document.getElementById('stickerImportSection'),
+stickerUploadPreviewBox: document.getElementById('stickerUploadPreviewBox'),
+stickerUploadPlaceholder: document.getElementById('stickerUploadPlaceholder'),
+stickerUploadPreviewImg: document.getElementById('stickerUploadPreviewImg'),
+stickerFileInput: document.getElementById('stickerFileInput'),
+uploadStickerName: document.getElementById('uploadStickerName'),
+stickerUrlPreviewBox: document.getElementById('stickerUrlPreviewBox'),
+stickerUrlPlaceholder: document.getElementById('stickerUrlPlaceholder'),
+stickerUrlPreviewImg: document.getElementById('stickerUrlPreviewImg'),
+stickerUrlInput: document.getElementById('stickerUrlInput'),
+urlStickerName: document.getElementById('urlStickerName'),
+stickerImportText: document.getElementById('stickerImportText'),
+cancelAddStickerBtn: document.getElementById('cancelAddStickerBtn'),
+confirmAddStickerBtn: document.getElementById('confirmAddStickerBtn'),
+stickerFullViewModal: document.getElementById('stickerFullViewModal'),
+stickerFullViewImg: document.getElementById('stickerFullViewImg'),
+};
 
 function logToUI(message) { const timestamp = new Date().toLocaleTimeString('en-GB'); const logEntry = `[${timestamp}] ${message}`; appData.logs.push(logEntry); console.log(message); }
 function getFormattedTimestamp(ts) { const now = ts ? new Date(ts) : new Date(); return `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`; }
@@ -140,13 +503,31 @@ function dataURLtoBlob(dataUrl){const arr=dataUrl.split(','),mime=arr[0].match(/
     });
 }
 
-async function backupData(){const btn=DOM.backupDataBtn;const originalText=btn.querySelector('span').textContent;btn.disabled=true;btn.querySelector('span').textContent='加载组件...';try{await loadJSZip();btn.querySelector('span').textContent='正在备份...';const zip=new JSZip();const globalsFolder=zip.folder('_globals');const userInfoToSave={name:appData.userInfo.name};globalsFolder.file('settings.json',JSON.stringify({apiConfig:appData.apiConfig,userInfo:userInfoToSave},null,2));if(appData.userInfo.avatar&&appData.userInfo.avatar.type!=='default'&&appData.userInfo.avatar.url){try{let avatarBlob;if(appData.userInfo.avatar.url.startsWith('data:image')){avatarBlob=dataURLtoBlob(appData.userInfo.avatar.url)}else{const response=await fetch(appData.userInfo.avatar.url);avatarBlob=await response.blob()}const extension=avatarBlob.type.split('/')[1]||'png';globalsFolder.file(`user_avatar.${extension}`,avatarBlob)}catch(e){console.error("备份用户头像失败:",e);logToUI(`备份用户头像失败: ${e.message}`)}}for(const chat of appData.chatObjects){const chatFolder=zip.folder(chat.id);const chatDataToSave={id:chat.id,name:chat.name,systemPrompt:chat.systemPrompt,messages:chat.messages,diaries:chat.diaries,lastDiaryIndex:chat.lastDiaryIndex,createdAt:chat.createdAt};chatFolder.file('history.json',JSON.stringify(chatDataToSave,null,2));if(chat.avatar&&chat.avatar.type!=='default'&&chat.avatar.url){try{let avatarBlob;if(chat.avatar.url.startsWith('data:image')){avatarBlob=dataURLtoBlob(chat.avatar.url)}else{const response=await fetch(chat.avatar.url);avatarBlob=await response.blob()}const extension=avatarBlob.type.split('/')[1]||'png';chatFolder.file(`avatar.${extension}`,avatarBlob)}catch(e){console.error(`备份聊天 [${chat.name}] 的头像失败:`,e);logToUI(`备份聊天 [${chat.name}] 的头像失败: ${e.message}`)}}}const content=await zip.generateAsync({type:"blob"});const timestamp=new Date().toISOString().slice(0,19).replace(/[-T:]/g,'');const filename=`WeChat-AI-Backup-${timestamp}.zip`;const a=document.createElement('a');a.href=URL.createObjectURL(content);a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);alert(`备份成功！文件已保存为 ${filename}，请在您浏览器的“下载”文件夹中查看。`)}catch(error){alert(error.message)}finally{btn.disabled=false;btn.querySelector('span').textContent=originalText}}
+async function backupData(){const btn=DOM.backupDataBtn;const originalText=btn.querySelector('span').textContent;btn.disabled=true;btn.querySelector('span').textContent='加载组件...';try{await loadJSZip();btn.querySelector('span').textContent='正在备份...';const zip=new JSZip();const globalsFolder=zip.folder('_globals');const userInfoToSave={name:appData.userInfo.name};globalsFolder.file('settings.json',JSON.stringify({apiConfig:appData.apiConfig,userInfo:userInfoToSave},null,2));
+// 备份表情数据
+if (appData.stickers.length > 0) {
+    globalsFolder.file('stickers.json', JSON.stringify(appData.stickers, null, 2));
+}
+if(appData.userInfo.avatar&&appData.userInfo.avatar.type!=='default'&&appData.userInfo.avatar.url){try{let avatarBlob;if(appData.userInfo.avatar.url.startsWith('data:image')){avatarBlob=dataURLtoBlob(appData.userInfo.avatar.url)}else{const response=await fetch(appData.userInfo.avatar.url);avatarBlob=await response.blob()}const extension=avatarBlob.type.split('/')[1]||'png';globalsFolder.file(`user_avatar.${extension}`,avatarBlob)}catch(e){console.error("备份用户头像失败:",e);logToUI(`备份用户头像失败: ${e.message}`)}}for(const chat of appData.chatObjects){const chatFolder=zip.folder(chat.id);const chatDataToSave={id:chat.id,name:chat.name,systemPrompt:chat.systemPrompt,messages:chat.messages,diaries:chat.diaries,lastDiaryIndex:chat.lastDiaryIndex,createdAt:chat.createdAt};chatFolder.file('history.json',JSON.stringify(chatDataToSave,null,2));if(chat.avatar&&chat.avatar.type!=='default'&&chat.avatar.url){try{let avatarBlob;if(chat.avatar.url.startsWith('data:image')){avatarBlob=dataURLtoBlob(chat.avatar.url)}else{const response=await fetch(chat.avatar.url);avatarBlob=await response.blob()}const extension=avatarBlob.type.split('/')[1]||'png';chatFolder.file(`avatar.${extension}`,avatarBlob)}catch(e){console.error(`备份聊天 [${chat.name}] 的头像失败:`,e);logToUI(`备份聊天 [${chat.name}] 的头像失败: ${e.message}`)}}}const content=await zip.generateAsync({type:"blob"});const timestamp=new Date().toISOString().slice(0,19).replace(/[-T:]/g,'');const filename=`WeChat-AI-Backup-${timestamp}.zip`;const a=document.createElement('a');a.href=URL.createObjectURL(content);a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);alert(`备份成功！文件已保存为 ${filename}，请在您浏览器的“下载”文件夹中查看。`)}catch(error){alert(error.message)}finally{btn.disabled=false;btn.querySelector('span').textContent=originalText}}
 async function triggerRestore(){const btn=DOM.restoreDataBtn;const originalText=btn.querySelector('span').textContent;btn.disabled=true;btn.querySelector('span').textContent='加载组件...';try{await loadJSZip();DOM.restoreFileInput.click()}catch(error){alert(error.message)}finally{btn.disabled=false;btn.querySelector('span').textContent=originalText}}
 async function handleRestoreFile(event){const file=event.target.files[0];if(!file)return;try{const zip=await JSZip.loadAsync(file);appData.restoreTempData.zip=zip;appData.restoreTempData.parsedChats=[];const directories=Object.keys(zip.files).filter(path=>path.endsWith('/')&&path.indexOf('/')===path.length-1);for(const dirPath of directories){if(dirPath==='_globals/')continue;const historyFile=zip.file(`${dirPath}history.json`);if(historyFile){const historyContent=await historyFile.async('string');const chatData=JSON.parse(historyContent);appData.restoreTempData.parsedChats.push({id:chatData.id,name:chatData.name})}}if(appData.restoreTempData.parsedChats.length===0){alert('这个备份文件里没有找到有效的聊天记录。')}else{showRestoreModal()}}catch(e){alert('无法读取或解析备份文件。请确保文件未损坏且格式正确。');console.error("恢复文件解析失败:",e);logToUI(`恢复文件解析失败: ${e.message}`)}finally{DOM.restoreFileInput.value=''}}
 function showRestoreModal(){DOM.restoreChatList.innerHTML='';appData.restoreTempData.parsedChats.forEach(chat=>{const div=document.createElement('div');div.className='flex items-center';div.innerHTML=`<label class="flex items-center space-x-3 cursor-pointer w-full p-1 hover:bg-wechat-gray rounded"><input type="checkbox" data-chat-id="${chat.id}" class="restore-chat-item rounded border-gray-300 text-wechat-green focus:ring-wechat-green"><span class="text-wechat-text">${escapeHtml(chat.name)}</span></label>`;DOM.restoreChatList.appendChild(div)});DOM.restoreSelectAll.checked=false;DOM.restoreModal.classList.remove('hidden')}
 function closeRestoreModal(){DOM.restoreModal.classList.add('hidden');appData.restoreTempData={zip:null,parsedChats:[]}}
 function blobToDataURL(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=e=>resolve(e.target.result);reader.onerror=e=>reject(e.target.error);reader.readAsDataURL(blob)})}
-async function confirmRestore(){const selectedIds=Array.from(document.querySelectorAll('.restore-chat-item:checked')).map(cb=>cb.dataset.chatId);if(selectedIds.length===0){alert('请至少选择一个聊天对象进行恢复。');return}const zip=appData.restoreTempData.zip;try{const settingsFile=zip.file('_globals/settings.json');if(settingsFile){const settingsContent=await settingsFile.async('string');const{apiConfig,userInfo}=JSON.parse(settingsContent);appData.apiConfig={...appData.apiConfig,...apiConfig};appData.userInfo.name=userInfo.name;const userAvatarFile=zip.file(/_globals\/user_avatar\.(png|jpg|jpeg|gif|webp)$/)[0];if(userAvatarFile){const avatarBlob=await userAvatarFile.async('blob');appData.userInfo.avatar={type:'upload',url:await blobToDataURL(avatarBlob)}}else{appData.userInfo.avatar={type:'default',url:''}}}for(const chatId of selectedIds){const chatDir=`${chatId}/`;const historyFile=zip.file(`${chatDir}history.json`);if(!historyFile)continue;const chatData=JSON.parse(await historyFile.async('string'));const chatAvatarFile=zip.file(new RegExp(`^${chatDir}avatar\\.(png|jpg|jpeg|gif|webp)$`))[0];if(chatAvatarFile){const avatarBlob=await chatAvatarFile.async('blob');chatData.avatar={type:'upload',url:await blobToDataURL(avatarBlob)}}else{chatData.avatar={type:'default',url:''}}chatData.diaries=chatData.diaries||[];chatData.lastDiaryIndex=chatData.lastDiaryIndex||0;const existingIndex=appData.chatObjects.findIndex(c=>c.id===chatId);if(existingIndex!==-1){appData.chatObjects[existingIndex]=chatData}else{appData.chatObjects.push(chatData)}}saveDataToStorage();loadUIData();renderChatList();if(isDiaryPageVisible())renderDiaryList();alert(`成功恢复了 ${selectedIds.length} 个聊天和全局设置！`);closeRestoreModal()}catch(e){alert('恢复过程中发生错误。');console.error("恢复失败：",e);logToUI(`恢复失败: ${e.message}`)}}
+async function confirmRestore(){const selectedIds=Array.from(document.querySelectorAll('.restore-chat-item:checked')).map(cb=>cb.dataset.chatId);if(selectedIds.length===0){alert('请至少选择一个聊天对象进行恢复。');return}const zip=appData.restoreTempData.zip;try{const settingsFile=zip.file('_globals/settings.json');if(settingsFile){const settingsContent=await settingsFile.async('string');const{apiConfig,userInfo}=JSON.parse(settingsContent);appData.apiConfig={...appData.apiConfig,...apiConfig};appData.userInfo.name=userInfo.name;
+// 恢复表情数据
+const stickersFile = zip.file('_globals/stickers.json');
+if (stickersFile) {
+    try {
+        const stickersContent = await stickersFile.async('string');
+        appData.stickers = JSON.parse(stickersContent);
+        saveStickerData();
+        logToUI(`成功恢复 ${appData.stickers.length} 个表情`);
+    } catch (e) {
+        logToUI(`恢复表情数据失败: ${e.message}`);
+    }
+}
+const userAvatarFile=zip.file(/_globals\/user_avatar\.(png|jpg|jpeg|gif|webp)$/)[0];if(userAvatarFile){const avatarBlob=await userAvatarFile.async('blob');appData.userInfo.avatar={type:'upload',url:await blobToDataURL(avatarBlob)}}else{appData.userInfo.avatar={type:'default',url:''}}}for(const chatId of selectedIds){const chatDir=`${chatId}/`;const historyFile=zip.file(`${chatDir}history.json`);if(!historyFile)continue;const chatData=JSON.parse(await historyFile.async('string'));const chatAvatarFile=zip.file(new RegExp(`^${chatDir}avatar\\.(png|jpg|jpeg|gif|webp)$`))[0];if(chatAvatarFile){const avatarBlob=await chatAvatarFile.async('blob');chatData.avatar={type:'upload',url:await blobToDataURL(avatarBlob)}}else{chatData.avatar={type:'default',url:''}}chatData.diaries=chatData.diaries||[];chatData.lastDiaryIndex=chatData.lastDiaryIndex||0;const existingIndex=appData.chatObjects.findIndex(c=>c.id===chatId);if(existingIndex!==-1){appData.chatObjects[existingIndex]=chatData}else{appData.chatObjects.push(chatData)}}saveDataToStorage();loadUIData();renderChatList();renderStickerGrid();if(isDiaryPageVisible())renderDiaryList();alert(`成功恢复了 ${selectedIds.length} 个聊天和全局设置！`);closeRestoreModal()}catch(e){alert('恢复过程中发生错误。');console.error("恢复失败：",e);logToUI(`恢复失败: ${e.message}`)}}
 
 // [Bugfix] 使用更健壮的方式加载数据
 function loadDataFromStorage() {
@@ -158,6 +539,7 @@ function loadDataFromStorage() {
         const storedUser = localStorage.getItem('aiMultiChatUserInfo');
         appData.userInfo = storedUser ? ({...{ name: 'user', avatar: { type: 'default', url: '' } }, ...JSON.parse(storedUser) }) : { name: 'user', avatar: { type: 'default', url: '' } };
         appData.activeChatId = localStorage.getItem('aiMultiChatActiveId') || null;
+loadStickerData();  // 加载表情数据
     } catch (e) {
         console.error("从localStorage加载数据失败:", e);
         alert("加载本地缓存数据失败，您的聊天记录可能已损坏。");
@@ -181,7 +563,7 @@ function loadUIData(){
 }
 
 function saveDataToStorage(){try{localStorage.setItem('aiMultiChatObjects',JSON.stringify(appData.chatObjects));localStorage.setItem('aiMultiChatApiConfig',JSON.stringify(appData.apiConfig));localStorage.setItem('aiMultiChatUserInfo',JSON.stringify(appData.userInfo));if(appData.activeChatId)localStorage.setItem('aiMultiChatActiveId',appData.activeChatId)}catch(e){console.error("保存数据到localStorage失败:",e);alert("保存数据失败，可能是由于存储空间已满。")}}
-function init(){loadDataFromStorage();loadUIData();renderChatList();setupEventListeners();setTimeout(adjustHeights,100)}
+function init(){loadDataFromStorage();loadUIData();renderChatList();setupEventListeners();initEmojiGrid();renderStickerGrid();setTimeout(adjustHeights,100)}
 function cleanAiResponse(raw){return(raw.replace(/<think>[\s\S]*?<\/think>/g,'').trim())||""}
 function adjustHeights(){const vh=window.innerHeight;const h1=DOM.chatListPage.querySelector('header')?.offsetHeight||0;const n1=DOM.chatListPage.querySelector('nav')?.offsetHeight||0;if(DOM.chatListContainer)DOM.chatListContainer.style.height=`${vh-h1-n1}px`;const h2=DOM.chatPage.querySelector('header')?.offsetHeight||0;const i2=DOM.chatPage.querySelector('.chat-input-container')?.offsetHeight||0;if(DOM.chatPageContainer)DOM.chatPageContainer.style.height=`${vh-h2-i2}px`}
 function renderChatList(){DOM.chatListContainer.innerHTML='';if(appData.chatObjects.length===0){DOM.emptyChatList.classList.remove('hidden');return}DOM.emptyChatList.classList.add('hidden');[...appData.chatObjects].sort((a,b)=>(b.messages.slice(-1)[0]?.timestamp||b.createdAt)-(a.messages.slice(-1)[0]?.timestamp||a.createdAt)).forEach(c=>{const iC=document.createElement('div');iC.className='chat-item-container relative';const w=document.createElement('div');w.className='chat-item-wrapper';const i=document.createElement('div');i.className='flex items-center flex-1 p-4 border-b border-wechat-darkGray cursor-pointer';i.dataset.chatId=c.id;const l=c.messages.length>0?c.messages[c.messages.length-1].content:'暂无消息';i.innerHTML=`<div class="w-12 h-12 rounded-full overflow-hidden mr-3 flex-shrink-0">${c.avatar&&c.avatar.type!=='default'&&c.avatar.url?`<img src="${escapeHtml(c.avatar.url)}" alt="${escapeHtml(c.name)}" class="w-full h-full object-cover">`:`<div class="w-full h-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-robot"></i></div>`}</div><div class="flex-1 min-w-0"><h3 class="font-medium text-wechat-text truncate">${escapeHtml(c.name)}</h3><p class="text-xs text-wechat-lightText truncate mt-1">${escapeHtml(l.substring(0,20)+(l.length>20?'...':''))}</p></div>`;const aD=document.createElement('div');aD.className='chat-item-actions';aD.innerHTML=`<button class="edit-action-btn" title="编辑" data-chat-id="${c.id}"><i class="fa fa-pencil"></i></button><button class="delete-action-btn" title="删除" data-chat-id="${c.id}"><i class="fa fa-trash"></i></button>`;const dB=document.createElement('div');dB.className='slide-delete-btn';dB.innerHTML='<i class="fa fa-trash mr-1"></i>移除';w.append(i,dB);iC.append(w,aD);DOM.chatListContainer.appendChild(iC);setupSwipeToDelete(w,c.id);i.addEventListener('click',()=>openChat(c.id));aD.querySelector('.edit-action-btn').addEventListener('click',(e)=>{e.stopPropagation();openChatDetail(c.id)});aD.querySelector('.delete-action-btn').addEventListener('click',(e)=>{e.stopPropagation();showConfirmDeleteModal(c.id)})})}
@@ -190,7 +572,33 @@ function createNewChat(){const nC={id:generateUniqueId(),name:DOM.newChatName.va
 function saveChatDetail(){const chatIndex=appData.chatObjects.findIndex(c=>c.id===appData.editChatTempData.chatId);if(chatIndex===-1)return;const updatedChat={...appData.chatObjects[chatIndex],name:DOM.editChatName.value.trim()||'AI助手',systemPrompt:DOM.editChatSystemPrompt.value.trim()||'你是一个友好、helpful 的AI助手。',avatar:{...appData.editChatTempData.avatar}};appData.chatObjects[chatIndex]=updatedChat;saveDataToStorage();renderChatList();if(isDiaryPageVisible())renderDiaryList();if(appData.activeChatId===updatedChat.id)openChat(updatedChat.id);DOM.chatDetailPage.classList.add('translate-x-full')}
 function openChat(id){const c=appData.chatObjects.find(c=>c.id===id);if(!c)return;appData.activeChatId=id;saveDataToStorage();DOM.chatPageTitle.textContent=c.name;DOM.chatPageAvatar.innerHTML=c.avatar&&c.avatar.type!=='default'&&c.avatar.url?`<img src="${escapeHtml(c.avatar.url)}" alt="${escapeHtml(c.name)}" class="w-full h-full object-cover">`:`<div class="w-full h-full rounded-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-robot"></i></div>`;DOM.chatPageTypingText.textContent=`${c.name}正在输入中...`;renderChatMessages(c.messages);DOM.chatListPage.classList.add('hidden');DOM.chatPage.classList.remove('hidden');DOM.chatPageMessageInput.value='';DOM.chatPageMessageInput.style.height='auto';setTimeout(()=>{if(DOM.chatPageContainer)DOM.chatPageContainer.scrollTop=DOM.chatPageContainer.scrollHeight;adjustHeights()},100)}
 function openChatDetail(id){const c=appData.chatObjects.find(c=>c.id===id);if(!c)return;appData.editChatTempData={chatId:id,avatar:{...c.avatar}};DOM.editChatName.value=c.name;DOM.editChatSystemPrompt.value=c.systemPrompt;updateEditChatAvatarPreview();DOM.editAvatarContainer.classList.add('hidden');DOM.chatDetailPage.classList.remove('translate-x-full')}
-function renderChatMessages(m){DOM.chatPageContainer.innerHTML=m.length===0?`<div class="flex flex-col items-center justify-center h-full text-wechat-lightText py-10"><i class="fa fa-comments-o text-4xl mb-3 opacity-50"></i><p class="text-sm">发送第一条消息开始对话吧</p></div>`:'';if(m.length===0)return;m.forEach((g,x)=>{const e=document.createElement('div');e.className=`flex items-start mb-6 ${g.role==='user'?'justify-end':''}`;e.dataset.messageRole=g.role;e.dataset.messageIndex=x;const uA=appData.userInfo.avatar&&appData.userInfo.avatar.type!=='default'&&appData.userInfo.avatar.url?`<div class="w-8 h-8 rounded-full overflow-hidden ml-3 flex-shrink-0"><img src="${escapeHtml(appData.userInfo.avatar.url)}" class="w-full h-full object-cover"></div>`:`<div class="user-avatar-small"><i class="fa fa-user"></i></div>`;const c=appData.chatObjects.find(c=>c.id===appData.activeChatId);const aA=!c||!c.avatar||c.avatar.type==='default'||!c.avatar.url?`<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-robot"></i></div>`:`<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(c.avatar.url)}" class="w-full h-full object-cover"></div>`;e.innerHTML=g.role==='user'?`<div class="chat-bubble-user"><p class="text-sm">${escapeHtml(g.content)}</p></div>${uA}`:`${aA}<div class="chat-bubble-ai"><p class="text-sm">${escapeHtml(g.content)}</p></div>`;DOM.chatPageContainer.appendChild(e)});setTimeout(()=>{if(DOM.chatPageContainer)DOM.chatPageContainer.scrollTop=DOM.chatPageContainer.scrollHeight},100)}
+function renderChatMessages(m){
+    DOM.chatPageContainer.innerHTML=m.length===0?`<div class="flex flex-col items-center justify-center h-full text-wechat-lightText py-10"><i class="fa fa-comments-o text-4xl mb-3 opacity-50"></i><p class="text-sm">发送第一条消息开始对话吧</p></div>`:'';
+    if(m.length===0)return;
+    m.forEach((g,x)=>{
+        const e=document.createElement('div');
+        e.className=`flex items-start mb-6 ${g.role==='user'?'justify-end':''}`;
+        e.dataset.messageRole=g.role;
+        e.dataset.messageIndex=x;
+        const uA=appData.userInfo.avatar&&appData.userInfo.avatar.type!=='default'&&appData.userInfo.avatar.url
+            ?`<div class="w-8 h-8 rounded-full overflow-hidden ml-3 flex-shrink-0"><img src="${escapeHtml(appData.userInfo.avatar.url)}" class="w-full h-full object-cover"></div>`
+            :`<div class="user-avatar-small ml-3"><i class="fa fa-user"></i></div>`;
+        const c=appData.chatObjects.find(c=>c.id===appData.activeChatId);
+        const aA=!c||!c.avatar||c.avatar.type==='default'||!c.avatar.url
+            ?`<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-robot"></i></div>`
+            :`<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(c.avatar.url)}" class="w-full h-full object-cover"></div>`;
+        
+        // 使用 parseMessageStickers 解析表情
+        const parsedContent = parseMessageStickers(g.content);
+        
+        e.innerHTML=g.role==='user'
+            ?`<div class="chat-bubble-user"><p class="text-sm">${parsedContent}</p></div>${uA}`
+            :`${aA}<div class="chat-bubble-ai"><p class="text-sm">${parsedContent}</p></div>`;
+        DOM.chatPageContainer.appendChild(e);
+    });
+    setTimeout(()=>{if(DOM.chatPageContainer)DOM.chatPageContainer.scrollTop=DOM.chatPageContainer.scrollHeight},100);
+}
+
 function getHistoryForApi(m){const t=appData.apiConfig.historyTurns;return(!t||t<=0)?m:m.slice(-t*2)}
 
 async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
@@ -228,7 +636,18 @@ async function sendOrRegenerate(contextMessages) {
     try {
         const diarySummary = chat.diaries.map(d => `[过往日记摘要]:\n${d.content}`).join('\n\n');
         const longTermMemoryContext = diarySummary ? `这是你和用户之间过往的对话摘要，请将此作为你的长期记忆：\n${diarySummary}\n\n` : '';
-        const systemPrompt = `${longTermMemoryContext}${appData.apiConfig.globalSystemPrompt}\n\n${chat.systemPrompt}`.trim();
+// 构建表情提示（如果有表情的话）
+let stickerHint = '';
+if (appData.stickers.length > 0) {
+    const stickerNames = appData.stickers.map(s => `:${s.name}:`).join(' ');
+    stickerHint = `\n\n【可用表情】你可以在回复中适当使用以下表情来增加表达效果：${stickerNames}\n使用格式：直接写 :表情名: 即可，例如"我很开心 :开心:"\n使用规则：
+- 每次回复最多只能用1个表情
+- 表情必须单独放在回复的最后一行
+- 不要把表情和文字写在同一行
+- 不是每次都要用表情，只在情绪特别强烈时偶尔使用一个表情，大部分回复不需要表情。`;
+}
+
+const systemPrompt = `${longTermMemoryContext}${appData.apiConfig.globalSystemPrompt}\n\n${chat.systemPrompt}${stickerHint}`.trim();
         const userName = appData.userInfo.name.trim() || 'user';
         
         let apiMessages = getHistoryForApi(contextMessages).map(m => ({
@@ -255,10 +674,32 @@ async function sendOrRegenerate(contextMessages) {
         );
 
         // 因为fetchWithRetry已经保证了data和choices的有效性，这里的代码可以简化
-        const cleanedContent = cleanAiResponse(data.choices[0].message.content);
-        const firstNewlineIndex = cleanedContent.indexOf('\n');
-        let messageParts = (firstNewlineIndex === -1) ? [cleanedContent] : [cleanedContent.substring(0, firstNewlineIndex), cleanedContent.substring(firstNewlineIndex + 1)];
-        const finalMessages = messageParts.map(p => p.trim()).filter(p => p !== '');
+  const cleanedContent = cleanAiResponse(data.choices[0].message.content);
+
+// 提取所有表情 :xxx:（只保留最后一个）
+const stickerPattern = /:([^:\s]+):/g;
+const allStickers = cleanedContent.match(stickerPattern) || [];
+const lastSticker = allStickers.length > 0 ? allStickers[allStickers.length - 1] : null;
+
+// 检查这个表情是否真的存在于我们的表情库中
+const validSticker = lastSticker && appData.stickers.find(s => `:${s.name}:` === lastSticker) ? lastSticker : null;
+
+// 从文字中移除所有表情
+let textContent = cleanedContent.replace(stickerPattern, '').trim();
+
+// 处理文字：第一段单独，后续合并
+const firstNewlineIndex = textContent.indexOf('\n');
+let messageParts = (firstNewlineIndex === -1) 
+    ? [textContent] 
+    : [textContent.substring(0, firstNewlineIndex), textContent.substring(firstNewlineIndex + 1)];
+
+const finalMessages = messageParts.map(p => p.trim()).filter(p => p !== '');
+
+// 把表情作为第三条消息
+if (validSticker) {
+    finalMessages.push(validSticker);
+}
+
         
         if (finalMessages.length > 0) { 
             finalMessages.forEach(part => { chat.messages.push({ role: 'assistant', content: part, timestamp: Date.now() }); }); 
@@ -378,7 +819,8 @@ try { const response = await fetch(`${appData.apiConfig.baseUrl}/chat/completion
 function setupSwipeToDelete(w,id){let s=0;w.addEventListener('touchstart',(e)=>{s=e.touches[0].clientX});w.addEventListener('touchmove',(e)=>{w.classList.toggle('swipe-left',s-e.touches[0].clientX>30)});w.addEventListener('touchend',()=>{});w.querySelector('.slide-delete-btn').addEventListener('click',()=>showConfirmDeleteModal(id))}
 function showConfirmDeleteModal(id){appData.editChatTempData.chatId=id;DOM.confirmDeleteModal.classList.remove('hidden');document.querySelectorAll('.chat-item-wrapper.swipe-left').forEach(w=>w.classList.remove('swipe-left'))}
 function hideConfirmDeleteModal(){DOM.confirmDeleteModal.classList.add('hidden');appData.editChatTempData.chatId=null}
-async function sendChatMessage(){const t=DOM.chatPageMessageInput.value.trim();if(!t||!appData.activeChatId)return;const i=appData.chatObjects.findIndex(c=>c.id===appData.activeChatId);if(i<0)return;const chat=appData.chatObjects[i];chat.messages.push({role:'user',content:t,timestamp:Date.now()});saveDataToStorage();renderChatMessages(chat.messages);DOM.chatPageMessageInput.value='';DOM.chatPageMessageInput.style.height='auto';await sendOrRegenerate(chat.messages)}
+async function sendChatMessage(){const t=DOM.chatPageMessageInput.value.trim();if(!t||!appData.activeChatId)return;const i=appData.chatObjects.findIndex(c=>c.id===appData.activeChatId);if(i<0)return;const chat=appData.chatObjects[i];chat.messages.push({role:'user',content:t,timestamp:Date.now()});saveDataToStorage();renderChatMessages(chat.messages);closeStickerPanel();  // 发送消息时关闭表情面板
+DOM.chatPageMessageInput.value='';DOM.chatPageMessageInput.style.height='auto';await sendOrRegenerate(chat.messages)}
 function generateUniqueId(){return Date.now().toString(36)+Math.random().toString(36).substr(2,9)}
 function escapeHtml(u){return u?u.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;").replace(/\n/g,"<br>"):''}
 function openAddChatModal(){appData.newChatTempData.avatar={type:'default',url:''};DOM.newChatName.value='AI助手';DOM.newChatSystemPrompt.value='你是一个友好、helpful 的AI助手。';DOM.newChatAvatarUrl.value='';DOM.newChatAvatarUrlContainer.classList.add('hidden');updateNewChatAvatarPreview();DOM.addChatModal.classList.remove('hidden')}
@@ -506,12 +948,356 @@ function deleteDiaryEntry(entryId){const chatIndex=appData.chatObjects.findIndex
 function showLogModal() { DOM.logOutput.value = appData.logs.join('\n'); DOM.logModal.classList.remove('hidden'); setTimeout(() => { DOM.logOutput.scrollTop = DOM.logOutput.scrollHeight; }, 100); }
 function closeLogModal() { DOM.logModal.classList.add('hidden'); }
 function clearLogs() { if (confirm('确定要清空所有诊断日志吗？')) { appData.logs = []; logToUI('日志已清空。'); if (!DOM.logModal.classList.contains('hidden')) { showLogModal(); } alert('日志已清空！'); } }
+// =========================================================================
+//  表情功能
+// =========================================================================
+
+const MAX_STICKERS = 50;  // 最大表情数量限制
+const EMOJI_LIST = [
+    '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘',
+    '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑',
+    '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮',
+    '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐', '😕', '😟', '🙁', '☹️', '😮',
+    '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓',
+    '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻',
+    '👽', '👾', '🤖', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '🙈', '🙉', '🙊', '💋',
+    '💯', '💢', '💥', '💫', '💦', '💨', '🕳️', '💤', '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏',
+    '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛',
+    '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+    '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☀️', '🌙', '⭐', '🌟', '✨'
+];
+
+// 初始化Emoji网格
+function initEmojiGrid() {
+    if (!DOM.emojiGrid) return;
+    DOM.emojiGrid.innerHTML = EMOJI_LIST.map(emoji => 
+        `<button class="emoji-item" data-emoji="${emoji}">${emoji}</button>`
+    ).join('');
+}
+
+// 渲染表情图网格
+function renderStickerGrid() {
+    if (!DOM.stickerGrid) return;
+    
+    if (appData.stickers.length === 0) {
+        DOM.stickerGrid.innerHTML = '';
+        if (DOM.stickerEmptyHint) DOM.stickerEmptyHint.style.display = 'block';
+        return;
+    }
+    
+    if (DOM.stickerEmptyHint) DOM.stickerEmptyHint.style.display = 'none';
+    
+    DOM.stickerGrid.innerHTML = appData.stickers.map(s => `
+        <div class="sticker-item" data-sticker-name="${escapeHtml(s.name)}">
+            <img src="${escapeHtml(s.url)}" alt="${escapeHtml(s.name)}" loading="lazy" onerror="this.style.display='none'">
+            <span class="sticker-name">:${escapeHtml(s.name)}:</span>
+            <button class="delete-sticker-btn" data-sticker-id="${s.id}">×</button>
+        </div>
+    `).join('');
+}
+
+// 切换表情面板显示
+function toggleStickerPanel() {
+    const isShow = DOM.stickerPanel.classList.toggle('show');
+    DOM.stickerToggleBtn.classList.toggle('active', isShow);
+}
+
+// 关闭表情面板
+function closeStickerPanel() {
+    DOM.stickerPanel.classList.remove('show');
+    DOM.stickerToggleBtn.classList.remove('active');
+}
+
+// 切换表情面板Tab
+function switchStickerTab(tab) {
+    DOM.emojiTabBtn.classList.toggle('active', tab === 'emoji');
+    DOM.customStickerTabBtn.classList.toggle('active', tab === 'custom');
+    DOM.emojiSection.classList.toggle('active', tab === 'emoji');
+    DOM.customStickerSection.classList.toggle('active', tab === 'custom');
+}
+
+// 插入Emoji到输入框
+function insertEmoji(emoji) {
+    const input = DOM.chatPageMessageInput;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const text = input.value;
+    input.value = text.substring(0, start) + emoji + text.substring(end);
+    input.selectionStart = input.selectionEnd = start + emoji.length;
+    input.focus();
+}
+
+// 插入表情代码到输入框
+function insertStickerCode(name) {
+    const input = DOM.chatPageMessageInput;
+    const start = input.selectionStart;
+    const text = input.value;
+    const code = `:${name}:`;
+    input.value = text.substring(0, start) + code + text.substring(start);
+    input.selectionStart = input.selectionEnd = start + code.length;
+    input.focus();
+    closeStickerPanel();
+}
+
+// 打开添加表情模态框
+function openAddStickerModal(mode) {
+    appData.stickerTempData = { mode, uploadData: null };
+    
+    // 隐藏所有section
+    DOM.stickerUploadSection.style.display = 'none';
+    DOM.stickerUrlSection.style.display = 'none';
+    DOM.stickerImportSection.style.display = 'none';
+    
+    // 重置表单
+    DOM.uploadStickerName.value = '';
+    DOM.urlStickerName.value = '';
+    DOM.stickerUrlInput.value = '';
+    DOM.stickerImportText.value = '';
+    DOM.stickerUploadPreviewImg.style.display = 'none';
+    DOM.stickerUploadPlaceholder.style.display = 'block';
+    DOM.stickerUrlPreviewImg.style.display = 'none';
+    DOM.stickerUrlPlaceholder.style.display = 'block';
+    DOM.stickerFileInput.value = '';
+    
+    // 显示对应section和标题
+    const titles = { upload: '上传表情图', url: '从URL添加表情图', import: '批量导入表情图' };
+    DOM.addStickerModalTitle.textContent = titles[mode] || '添加表情图';
+    
+    if (mode === 'upload') DOM.stickerUploadSection.style.display = 'block';
+    else if (mode === 'url') DOM.stickerUrlSection.style.display = 'block';
+    else if (mode === 'import') DOM.stickerImportSection.style.display = 'block';
+    
+    DOM.addStickerModal.classList.remove('hidden');
+    closeStickerPanel();
+}
+
+// 关闭添加表情模态框
+function closeAddStickerModal() {
+    DOM.addStickerModal.classList.add('hidden');
+    appData.stickerTempData = { mode: 'upload', uploadData: null };
+}
+
+// 处理表情上传预览
+async function handleStickerUpload(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    
+    // 对于GIF保持原样，其他格式压缩
+    if (file.type === 'image/gif') {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target.result;
+            // 检查大小，GIF如果太大提示用URL方式
+            if (dataUrl.length > 100 * 1024) {
+                alert('GIF图片较大，建议使用URL方式添加以节省存储空间');
+            }
+            appData.stickerTempData.uploadData = dataUrl;
+            DOM.stickerUploadPreviewImg.src = dataUrl;
+            DOM.stickerUploadPreviewImg.style.display = 'block';
+            DOM.stickerUploadPlaceholder.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        // 非GIF压缩处理
+        const compressed = await compressImage(file, 150);
+        appData.stickerTempData.uploadData = compressed;
+        DOM.stickerUploadPreviewImg.src = compressed;
+        DOM.stickerUploadPreviewImg.style.display = 'block';
+        DOM.stickerUploadPlaceholder.style.display = 'none';
+    }
+}
+
+// 预览URL表情
+function previewStickerUrl() {
+    const url = DOM.stickerUrlInput.value.trim();
+    if (url) {
+        DOM.stickerUrlPreviewImg.src = url;
+        DOM.stickerUrlPreviewImg.style.display = 'block';
+        DOM.stickerUrlPlaceholder.style.display = 'none';
+        DOM.stickerUrlPreviewImg.onerror = () => {
+            DOM.stickerUrlPreviewImg.style.display = 'none';
+            DOM.stickerUrlPlaceholder.style.display = 'block';
+        };
+    } else {
+        DOM.stickerUrlPreviewImg.style.display = 'none';
+        DOM.stickerUrlPlaceholder.style.display = 'block';
+    }
+}
+
+// 保存表情
+function saveSticker() {
+    const mode = appData.stickerTempData.mode;
+    
+    if (appData.stickers.length >= MAX_STICKERS) {
+        alert(`表情数量已达上限（${MAX_STICKERS}个），请先删除一些表情`);
+        return;
+    }
+    
+    if (mode === 'upload') {
+        const name = DOM.uploadStickerName.value.trim();
+        if (!name) { alert('请输入表情名称'); return; }
+        if (!appData.stickerTempData.uploadData) { alert('请先选择图片'); return; }
+        if (appData.stickers.find(s => s.name === name)) { alert('该表情名称已存在'); return; }
+        
+        appData.stickers.push({
+            id: generateUniqueId(),
+            name,
+            url: appData.stickerTempData.uploadData
+        });
+        
+    } else if (mode === 'url') {
+        const name = DOM.urlStickerName.value.trim();
+        const url = DOM.stickerUrlInput.value.trim();
+        if (!name || !url) { alert('请填写表情名称和URL'); return; }
+        if (appData.stickers.find(s => s.name === name)) { alert('该表情名称已存在'); return; }
+        
+        appData.stickers.push({
+            id: generateUniqueId(),
+            name,
+            url
+        });
+        
+    } else if (mode === 'import') {
+        const text = DOM.stickerImportText.value.trim();
+        if (!text) { alert('请输入要导入的表情'); return; }
+        
+        const lines = text.split('\n').filter(l => l.trim());
+        let added = 0, errors = [];
+        
+        for (const line of lines) {
+            if (appData.stickers.length >= MAX_STICKERS) {
+                errors.push(`已达上限，跳过后续`);
+                break;
+            }
+            
+            // 支持 名称:URL 或 名称：URL（中文冒号）
+            const match = line.match(/^(.+?)[:：](.+)$/);
+            if (match) {
+                const name = match[1].trim();
+                const url = match[2].trim();
+                
+                if (appData.stickers.find(s => s.name === name)) {
+                    errors.push(`名称重复: ${name}`);
+                    continue;
+                }
+                
+                appData.stickers.push({
+                    id: generateUniqueId() + '_' + added,
+                    name,
+                    url
+                });
+                added++;
+            } else {
+                errors.push(`格式错误: ${line.substring(0, 15)}...`);
+            }
+        }
+        
+        if (errors.length > 0) {
+            alert(`成功导入 ${added} 个表情\n\n问题项:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n...' : ''}`);
+        } else if (added > 0) {
+            alert(`成功导入 ${added} 个表情！`);
+        }
+    }
+    
+    saveStickerData();
+    renderStickerGrid();
+    closeAddStickerModal();
+    logToUI(`表情保存成功，当前共 ${appData.stickers.length} 个表情`);
+}
+
+// 删除表情
+function deleteSticker(id) {
+    if (!confirm('确定要删除这个表情吗？')) return;
+    appData.stickers = appData.stickers.filter(s => s.id !== id);
+    saveStickerData();
+    renderStickerGrid();
+}
+
+// 保存表情数据到localStorage
+function saveStickerData() {
+    try {
+        localStorage.setItem('aiMultiChatStickers', JSON.stringify(appData.stickers));
+    } catch (e) {
+        console.error('保存表情数据失败:', e);
+        alert('保存表情失败，可能存储空间不足。建议使用URL方式添加表情。');
+    }
+}
+
+// 加载表情数据
+function loadStickerData() {
+    try {
+        const stored = localStorage.getItem('aiMultiChatStickers');
+        appData.stickers = stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        console.error('加载表情数据失败:', e);
+        appData.stickers = [];
+    }
+}
+
+// 显示表情全屏预览
+function showStickerFullView(url) {
+    DOM.stickerFullViewImg.src = url;
+    DOM.stickerFullViewModal.classList.remove('hidden');
+}
+
+// 关闭表情全屏预览
+function closeStickerFullView() {
+    DOM.stickerFullViewModal.classList.add('hidden');
+}
+
+// 解析消息内容中的表情代码
+function parseMessageStickers(content) {
+    if (!content) return '';
+    
+    // 先转义HTML
+    let result = escapeHtml(content);
+    
+    // 替换 :表情名: 为图片（在escapeHtml之后处理）
+    // 由于escapeHtml会转换特殊字符，我们需要用原始content来匹配
+    const stickerPattern = /:([^:\s]+):/g;
+    let match;
+    
+    // 收集所有表情替换
+    const replacements = [];
+    while ((match = stickerPattern.exec(content)) !== null) {
+        const name = match[1];
+        const sticker = appData.stickers.find(s => s.name === name);
+        if (sticker) {
+            replacements.push({
+                original: `:${name}:`,
+                escaped: escapeHtml(`:${name}:`),
+                html: `<img class="message-sticker" src="${escapeHtml(sticker.url)}" alt=":${escapeHtml(name)}:" title=":${escapeHtml(name)}:" loading="lazy" onclick="showStickerFullView('${escapeHtml(sticker.url)}')">`
+            });
+        }
+    }
+    
+    // 应用替换（从后往前替换避免位置偏移问题）
+    for (const r of replacements) {
+        result = result.split(r.escaped).join(r.html);
+    }
+    
+    return result;
+}
+
 function setupEventListeners(){const eMap={addChatBtn:{click:openAddChatModal},backToChatListBtn:{click:()=>{DOM.chatPage.classList.add('hidden');DOM.chatListPage.classList.remove('hidden')}},chatPageSendBtn:{click:sendChatMessage},chatPageMessageInput:{keydown:(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMessage()}},input:(e)=>{e.target.style.height='auto';e.target.style.height=`${Math.min(e.target.scrollHeight,120)}px`}},chatPageMoreBtn:{click:()=>{if(appData.activeChatId)openChatDetail(appData.activeChatId)}},settingsForm:{submit:saveApiSettings},refreshModelsBtn:{click:fetchModelList},
 userAvatarUpload:{change:handleUserAvatarUpload},userAvatarUrlBtn:{click:()=>DOM.userAvatarUrlContainer.classList.toggle('hidden')},userAvatarUrlConfirm:{click:handleUserAvatarUrl},userAvatarUrlCancel:{click:()=>DOM.userAvatarUrlContainer.classList.add('hidden')},closeAddChatModalBtn:{click:closeAddChatModal},newChatAvatarUpload:{change:handleNewChatAvatarUpload},newChatAvatarUrlBtn:{click:()=>DOM.newChatAvatarUrlContainer.classList.toggle('hidden')},newChatAvatarUrlConfirm:{click:handleNewChatAvatarUrl},newChatAvatarUrlCancel:{click:()=>DOM.newChatAvatarUrlContainer.classList.add('hidden')},createChatBtn:{click:createNewChat},backToChatPageBtn:{click:()=>DOM.chatDetailPage.classList.add('translate-x-full')},deleteChatBtn:{click:()=>{if(appData.editChatTempData.chatId)showConfirmDeleteModal(appData.editChatTempData.chatId)}},editAvatarBtn:{click:()=>DOM.editAvatarContainer.classList.remove('hidden')},cancelEditAvatarBtn:{click:()=>DOM.editAvatarContainer.classList.add('hidden')},editChatAvatarUpload:{change:handleEditChatAvatarUpload},editChatAvatarUrlBtn:{click:()=>DOM.editChatAvatarUrlContainer.classList.toggle('hidden')},editChatAvatarUrlConfirm:{click:handleEditChatAvatarUrl},editChatAvatarUrlCancel:{click:()=>DOM.editChatAvatarUrlContainer.classList.add('hidden')},saveChatDetailBtn:{click:saveChatDetail},cancelDeleteBtn:{click:hideConfirmDeleteModal},confirmDeleteBtn:{click:()=>{if(appData.editChatTempData.chatId)deleteChat(appData.editChatTempData.chatId)}},regenerateMessageBtn:{click:()=>{if(appData.contextMenuData.messageIndex!==null)regenerateAiResponse(appData.contextMenuData.messageIndex);DOM.messageContextMenu.classList.add('hidden')}},
 deleteMessageBtn:{click:()=>{deleteMessage(appData.contextMenuData.messageIndex);DOM.messageContextMenu.classList.add('hidden')}},
 editMessageBtn:{click:()=>{editMessage(appData.contextMenuData.messageIndex);DOM.messageContextMenu.classList.add('hidden')}},
 resendMessageBtn:{click:()=>{resendMessage(appData.contextMenuData.messageIndex);DOM.messageContextMenu.classList.add('hidden')}},
-backupDataBtn:{click:backupData},restoreDataBtn:{click:triggerRestore},restoreFileInput:{change:handleRestoreFile},closeRestoreModalBtn:{click:closeRestoreModal},cancelRestoreBtn:{click:closeRestoreModal},confirmRestoreBtn:{click:confirmRestore},restoreSelectAll:{change:(e)=>document.querySelectorAll('.restore-chat-item').forEach(cb=>cb.checked=e.target.checked)},chatNavBtn:{click:()=>{togglePage('chat',true)}},diaryNavBtn:{click:()=>{togglePage('diary',true)}},settingsNavBtn:{click:()=>{togglePage('settings',true)}},closeSettingsBtn:{click:()=>{togglePage('settings',false)}},closeDiaryListPageBtn:{click:()=>{togglePage('diary',false)}},backToDiaryListBtn:{click:()=>DOM.diaryDetailPage.classList.add('translate-x-full')},manualDiaryBtn: {click: manualGenerateDiary}, resetDiaryPtrBtn: {click: resetDiaryPointer},viewLogsBtn: { click: showLogModal }, clearLogsBtn: { click: clearLogs }, closeLogModalBtn: { click: closeLogModal },closeEditDiaryModalBtn:{click:closeEditDiaryModal},cancelEditDiaryBtn:{click:closeEditDiaryModal},saveEditDiaryBtn:{click:saveDiaryEntry}};for(const id in eMap){if(DOM[id]){for(const ev in eMap[id]){DOM[id].addEventListener(ev,eMap[id][ev])}}}[DOM.addChatModal,DOM.confirmDeleteModal,DOM.restoreModal,DOM.editDiaryEntryModal,DOM.logModal].forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.add('hidden')}));[...DOM.addChatModal.children,...DOM.confirmDeleteModal.children,...DOM.restoreModal.children,...DOM.editDiaryEntryModal.children,...DOM.logModal.children,DOM.settingsPage,DOM.chatDetailPage,DOM.diaryListPage,DOM.diaryDetailPage].forEach(c=>c.addEventListener('click',e=>e.stopPropagation()));
+backupDataBtn:{click:backupData},restoreDataBtn:{click:triggerRestore},restoreFileInput:{change:handleRestoreFile},closeRestoreModalBtn:{click:closeRestoreModal},cancelRestoreBtn:{click:closeRestoreModal},confirmRestoreBtn:{click:confirmRestore},restoreSelectAll:{change:(e)=>document.querySelectorAll('.restore-chat-item').forEach(cb=>cb.checked=e.target.checked)},chatNavBtn:{click:()=>{togglePage('chat',true)}},diaryNavBtn:{click:()=>{togglePage('diary',true)}},settingsNavBtn:{click:()=>{togglePage('settings',true)}},closeSettingsBtn:{click:()=>{togglePage('settings',false)}},closeDiaryListPageBtn:{click:()=>{togglePage('diary',false)}},backToDiaryListBtn:{click:()=>DOM.diaryDetailPage.classList.add('translate-x-full')},manualDiaryBtn: {click: manualGenerateDiary}, resetDiaryPtrBtn: {click: resetDiaryPointer},viewLogsBtn: { click: showLogModal }, clearLogsBtn: { click: clearLogs }, closeLogModalBtn: { click: closeLogModal },closeEditDiaryModalBtn:{click:closeEditDiaryModal},cancelEditDiaryBtn:{click:closeEditDiaryModal},saveEditDiaryBtn:{click:saveDiaryEntry},
+// 表情功能事件
+stickerToggleBtn:{click:toggleStickerPanel},
+emojiTabBtn:{click:()=>switchStickerTab('emoji')},
+customStickerTabBtn:{click:()=>switchStickerTab('custom')},
+addStickerUploadBtn:{click:()=>openAddStickerModal('upload')},
+addStickerUrlBtn:{click:()=>openAddStickerModal('url')},
+addStickerImportBtn:{click:()=>openAddStickerModal('import')},
+closeAddStickerModalBtn:{click:closeAddStickerModal},
+cancelAddStickerBtn:{click:closeAddStickerModal},
+confirmAddStickerBtn:{click:saveSticker},
+stickerUploadPreviewBox:{click:()=>DOM.stickerFileInput.click()},
+stickerFileInput:{change:(e)=>handleStickerUpload(e.target.files[0])},
+stickerUrlInput:{input:previewStickerUrl},
+stickerFullViewModal:{click:closeStickerFullView}};for(const id in eMap){if(DOM[id]){for(const ev in eMap[id]){DOM[id].addEventListener(ev,eMap[id][ev])}}}[DOM.addChatModal,DOM.confirmDeleteModal,DOM.restoreModal,DOM.editDiaryEntryModal,DOM.logModal].forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.add('hidden')}));[...DOM.addChatModal.children,...DOM.confirmDeleteModal.children,...DOM.restoreModal.children,...DOM.editDiaryEntryModal.children,...DOM.logModal.children,DOM.settingsPage,DOM.chatDetailPage,DOM.diaryListPage,DOM.diaryDetailPage].forEach(c=>c.addEventListener('click',e=>e.stopPropagation()));
 DOM.chatPageContainer.addEventListener('contextmenu',(e)=>{
     const t=e.target.closest('[data-message-role]');
     if(t){
@@ -524,6 +1310,39 @@ DOM.chatPageContainer.addEventListener('contextmenu',(e)=>{
         DOM.messageContextMenu.style.left=`${e.clientX}px`;
         DOM.messageContextMenu.style.top=`${e.clientY}px`;
         DOM.messageContextMenu.classList.remove('hidden')
+    }
+});
+// 表情面板事件委托
+DOM.emojiGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.emoji-item');
+    if (btn) {
+        insertEmoji(btn.dataset.emoji);
+    }
+});
+
+DOM.stickerGrid.addEventListener('click', (e) => {
+    const item = e.target.closest('.sticker-item');
+    const deleteBtn = e.target.closest('.delete-sticker-btn');
+    
+    if (deleteBtn) {
+        e.stopPropagation();
+        deleteSticker(deleteBtn.dataset.stickerId);
+    } else if (item) {
+        insertStickerCode(item.dataset.stickerName);
+    }
+});
+
+// 点击外部关闭表情面板
+document.addEventListener('click', (e) => {
+    if (!DOM.stickerPanel.contains(e.target) && !DOM.stickerToggleBtn.contains(e.target)) {
+        closeStickerPanel();
+    }
+});
+
+// 添加表情模态框点击外部关闭
+DOM.addStickerModal.addEventListener('click', (e) => {
+    if (e.target === DOM.addStickerModal) {
+        closeAddStickerModal();
     }
 });
 
