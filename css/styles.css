@@ -1,0 +1,1088 @@
+/* =========================================================================
+   微信风格多AI聊天 - 样式文件
+   ========================================================================= */
+
+/* ========== 基础样式 ========== */
+html, body {
+    height: 100%;
+    overflow: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+@supports (padding-bottom: constant(safe-area-inset-bottom)) or (padding-bottom: env(safe-area-inset-bottom)) {
+    .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nav-safe-area {
+        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    }
+}
+
+/* ========== 布局样式 ========== */
+.chat-input-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+}
+
+.chat-content,
+.chat-list-container,
+.diary-list-container,
+.diary-entries-container {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.chat-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+input[type="checkbox"] {
+    flex-shrink: 0;
+}
+
+button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* ========== 表情功能样式 ========== */
+.sticker-panel {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    width: 320px;
+    max-height: 350px;
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    display: none;
+    flex-direction: column;
+    margin-bottom: 8px;
+    z-index: 20;
+}
+
+.sticker-panel.show {
+    display: flex;
+}
+
+.sticker-tabs {
+    display: flex;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.sticker-tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.3s;
+}
+
+.sticker-tab.active {
+    color: #07C160;
+    border-bottom: 2px solid #07C160;
+    margin-bottom: -1px;
+}
+
+.sticker-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    max-height: 250px;
+}
+
+.sticker-section {
+    display: none;
+}
+
+.sticker-section.active {
+    display: block;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+}
+
+.emoji-item {
+    width: 100%;
+    aspect-ratio: 1;
+    border: none;
+    background: transparent;
+    font-size: 22px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.emoji-item:hover {
+    background: #f0f0f0;
+    transform: scale(1.15);
+}
+
+.sticker-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.sticker-item {
+    aspect-ratio: 1;
+    border: 2px solid transparent;
+    background: #f5f5f5;
+    border-radius: 8px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.2s;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sticker-item:hover {
+    border-color: #07C160;
+    transform: scale(1.05);
+}
+
+.sticker-item img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.sticker-item .sticker-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.6);
+    font-size: 10px;
+    padding: 2px;
+    text-align: center;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sticker-item .delete-sticker-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    background: rgba(244, 53, 48, 0.9);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 10px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.sticker-item:hover .delete-sticker-btn {
+    display: flex;
+}
+
+.sticker-manage-bar {
+    border-top: 1px solid #e5e5e5;
+    padding: 8px;
+    display: flex;
+    gap: 6px;
+}
+
+.sticker-manage-btn {
+    flex: 1;
+    padding: 8px;
+    border: 1px dashed #ccc;
+    background: transparent;
+    color: #666;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.3s;
+}
+
+.sticker-manage-btn:hover {
+    border-color: #07C160;
+    color: #07C160;
+    background: rgba(7, 193, 96, 0.05);
+}
+
+.sticker-tool-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f5f5f5;
+    color: #666;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sticker-tool-btn:hover {
+    background: #e5e5e5;
+}
+
+.sticker-tool-btn.active {
+    background: #07C160;
+    color: white;
+}
+
+.message-sticker {
+    max-width: 120px;
+    max-height: 120px;
+    border-radius: 6px;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+.message-sticker:hover {
+    transform: scale(1.03);
+}
+
+.sticker-upload-preview-box {
+    width: 80px;
+    height: 80px;
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.sticker-upload-preview-box:hover {
+    border-color: #07C160;
+}
+
+.sticker-upload-preview-box img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.sticker-empty-state {
+    text-align: center;
+    padding: 30px 15px;
+    color: #999;
+}
+
+.sticker-empty-state i {
+    font-size: 32px;
+    margin-bottom: 10px;
+    display: block;
+    opacity: 0.5;
+}
+
+.sticker-empty-state p {
+    font-size: 12px;
+}
+
+.import-format-hint {
+    background: rgba(7, 193, 96, 0.1);
+    border: 1px solid rgba(7, 193, 96, 0.3);
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.import-format-hint-title {
+    font-size: 12px;
+    color: #07C160;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.import-format-hint-code {
+    font-family: monospace;
+    font-size: 11px;
+    color: #666;
+    background: #f9f9f9;
+    padding: 8px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* ========== 朋友圈样式 ========== */
+
+.moments-cover {
+    position: relative;
+    height: 200px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    flex-shrink: 0;
+}
+
+.moments-cover-bg {
+    position: absolute;
+    inset: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🌄</text></svg>') center/cover;
+    opacity: 0.3;
+}
+
+.moments-user-info {
+    position: absolute;
+    bottom: 20px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.moments-user-name {
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.moments-user-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    background: #fff;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ccc;
+    font-size: 24px;
+}
+
+.moments-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.moments-list-container {
+    background: #f5f5f5;
+}
+
+.moment-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.moment-empty i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.moment-empty p {
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.6;
+}
+
+.moment-item {
+    background: white;
+    padding: 16px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.moment-header {
+    display: flex;
+    gap: 12px;
+}
+
+.moment-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    background: #07C160;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+}
+
+.moment-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.moment-avatar.user-moment-avatar {
+    background: #999;
+}
+
+.moment-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.moment-author {
+    font-size: 15px;
+    font-weight: 600;
+    color: #576b95;
+    margin-bottom: 4px;
+}
+
+.moment-content {
+    font-size: 15px;
+    color: #333;
+    line-height: 1.5;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.moment-images {
+    display: grid;
+    gap: 4px;
+    margin-top: 10px;
+    max-width: 280px;
+}
+
+.moment-images.cols-1 {
+    grid-template-columns: 1fr;
+    max-width: 200px;
+}
+
+.moment-images.cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.moment-images.cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.moment-image-item {
+    aspect-ratio: 1;
+    background: #f0f0f0;
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.moment-image-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.2s;
+}
+
+.moment-image-item:hover img {
+    transform: scale(1.05);
+}
+
+.moment-image-item img.idb-loading {
+    background: #f0f0f0;
+    min-height: 60px;
+}
+
+.moment-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.moment-time {
+    font-size: 12px;
+    color: #999;
+}
+
+.moment-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.moment-action-btn {
+    background: #f5f5f5;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #576b95;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.moment-action-btn:hover {
+    background: #e8e8e8;
+}
+
+.moment-action-btn.liked {
+    color: #f43530;
+}
+
+.moment-action-btn.liked i {
+    animation: likeAnim 0.3s ease;
+}
+
+@keyframes likeAnim {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+.moment-interactions {
+    background: #f5f5f5;
+    border-radius: 4px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.moment-likes {
+    padding: 8px 10px;
+    font-size: 13px;
+    color: #576b95;
+    border-bottom: 1px solid #e5e5e5;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.moment-likes i {
+    color: #f43530;
+}
+
+.moment-comments {
+    padding: 0;
+}
+
+.moment-comment-item {
+    padding: 8px 10px;
+    font-size: 13px;
+    line-height: 1.4;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.moment-comment-item:last-child {
+    border-bottom: none;
+}
+
+.moment-comment-author {
+    color: #576b95;
+    font-weight: 500;
+}
+
+.moment-comment-text {
+    color: #333;
+}
+
+/* 动态详情页 */
+#momentDetailContent {
+    background: #f5f5f5;
+}
+
+.moment-detail-card {
+    background: white;
+    margin-bottom: 10px;
+}
+
+.moment-detail-header {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.moment-detail-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 6px;
+    background: #07C160;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+}
+
+.moment-detail-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.moment-detail-avatar.user-moment-avatar {
+    background: #999;
+}
+
+.moment-detail-author {
+    font-size: 16px;
+    font-weight: 600;
+    color: #576b95;
+}
+
+.moment-detail-time {
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.moment-detail-body {
+    padding: 16px;
+}
+
+.moment-detail-content {
+    font-size: 16px;
+    color: #333;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.moment-detail-images {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.moment-detail-images.cols-1 {
+    grid-template-columns: 1fr;
+}
+
+.moment-detail-images.cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.moment-detail-images.cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.moment-detail-image-item {
+    aspect-ratio: 1;
+    background: #f0f0f0;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.moment-detail-image-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.moment-detail-actions {
+    display: flex;
+    padding: 12px 16px;
+    border-top: 1px solid #f0f0f0;
+    gap: 20px;
+}
+
+.moment-detail-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    font-size: 14px;
+    color: #666;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 20px;
+    transition: all 0.2s;
+}
+
+.moment-detail-action-btn:hover {
+    background: #f5f5f5;
+}
+
+.moment-detail-action-btn.liked {
+    color: #f43530;
+}
+
+.moment-comments-section {
+    background: white;
+    padding: 16px;
+}
+
+.moment-comments-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.moment-comment-full {
+    display: flex;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.moment-comment-full:last-child {
+    border-bottom: none;
+}
+
+.moment-comment-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #ddd;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+}
+
+.moment-comment-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.moment-comment-avatar.user-type {
+    background: #999;
+}
+
+.moment-comment-avatar.ai-type {
+    background: #07C160;
+}
+
+.moment-comment-avatar.npc-type {
+    background: #5B7FFF;
+}
+
+.moment-comment-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.moment-comment-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.moment-comment-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #576b95;
+    cursor: pointer;
+}
+
+.moment-comment-name:hover {
+    text-decoration: underline;
+}
+
+.moment-comment-name.no-click {
+    cursor: default;
+}
+
+.moment-comment-name.no-click:hover {
+    text-decoration: none;
+}
+
+.moment-comment-time {
+    font-size: 11px;
+    color: #999;
+}
+
+.moment-comment-content {
+    font-size: 14px;
+    color: #333;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.moment-comment-reply-tag {
+    font-size: 12px;
+    color: #999;
+    margin-right: 4px;
+}
+
+.moment-comment-reply-name {
+    color: #576b95;
+    font-weight: 500;
+}
+
+.moment-no-comments {
+    text-align: center;
+    padding: 30px;
+    color: #999;
+    font-size: 13px;
+}
+
+.moment-comment-input {
+    position: sticky;
+    bottom: 0;
+}
+
+.moment-reply-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: #f5f5f5;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: #666;
+}
+
+.moment-reply-indicator button {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+}
+
+.moment-reply-indicator button:hover {
+    color: #333;
+}
+
+/* 发布模式按钮 */
+#publishModeAuto.active,
+#publishModeManual.active {
+    border-color: #07C160;
+    background: rgba(7, 193, 96, 0.1);
+    color: #07C160;
+}
+
+#publishModeAuto:not(.active),
+#publishModeManual:not(.active) {
+    border-color: #e5e5e5;
+    background: transparent;
+    color: #999;
+}
+
+/* 图片模式按钮 */
+.img-mode-btn {
+    transition: all 0.2s;
+}
+
+.img-mode-btn.active {
+    border-color: #07C160 !important;
+    background: rgba(7, 193, 96, 0.1) !important;
+    color: #07C160 !important;
+}
+
+.img-mode-btn:not(.active) {
+    border-color: #e5e5e5 !important;
+    background: transparent !important;
+    color: #999 !important;
+}
+
+/* AI回复加载动画 */
+.moment-ai-replying {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    color: #999;
+    font-size: 13px;
+}
+
+.moment-ai-replying i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ========== 小红点 ========== */
+.moments-badge {
+    position: absolute;
+    top: 6px;
+    right: 50%;
+    margin-right: -18px;
+    width: 8px;
+    height: 8px;
+    background: #f43530;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px white;
+}
+
+/* ========== NPC好友管理 ========== */
+.npc-friend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.npc-friend-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #5B7FFF;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+}
+
+.npc-friend-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.npc-friend-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.npc-friend-meta {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+}
+
+.npc-friend-delete {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: rgba(244, 53, 48, 0.1);
+    color: #f43530;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.npc-friend-delete:hover {
+    background: rgba(244, 53, 48, 0.2);
+}
+
+.npc-friends-empty {
+    text-align: center;
+    padding: 20px;
+    color: #999;
+    font-size: 13px;
+}
+
+/* ========== 设置页分隔区域 ========== */
+.settings-section-hint {
+    font-size: 12px;
+    color: #999;
+    line-height: 1.5;
+    padding: 6px 0;
+}
+/* ========== 发布进度指示器 ========== */
+.moment-publishing-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #e8f5e9 0%, #fff8e1 100%);
+    border-bottom: 1px solid #e5e5e5;
+    animation: publishPulse 2s ease-in-out infinite;
+}
+
+@keyframes publishPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
+.moment-publishing-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    background: #07C160;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px;
+}
+
+.moment-publishing-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.moment-publishing-info {
+    flex: 1;
+}
+
+.moment-publishing-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.moment-publishing-status {
+    font-size: 12px;
+    color: #07C160;
+    margin-top: 2px;
+}
+
+.moment-publishing-status i {
+    margin-right: 4px;
+}
+
+/* 评论展开/折叠 */
+.moment-comments-toggle {
+    font-size: 13px;
+    padding: 6px 10px;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.moment-comments-toggle:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
