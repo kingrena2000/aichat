@@ -1110,20 +1110,18 @@ async function generateFriendComments(moment) {
             commenters.push({ type: 'npc', friend: f, name: f.name });
         }
     } else {
-        // 角色发的 → 手动好友 + 临时好友 + 随机其他角色
+        // 角色发的 → 手动好友 + 临时好友 + 互相绑定的角色（不随机拉无关角色）
         const chat = appData.chatObjects.find(c => c.id === moment.chatId);
         if (!chat) return;
 
-        // 手动添加的好友
+        // 手动添加的好友（绑定了该角色 或 未绑定任何角色的共享好友）
         const manualFriends = getRelatedFriends(chat.id);
 
         if (manualFriends.length >= 2) {
-            // 够了，用手动好友
             for (const f of manualFriends) {
                 commenters.push({ type: 'npc', friend: f, name: f.name });
             }
         } else {
-            // 不够，搜索/虚构临时好友
             if (manualFriends.length > 0) {
                 for (const f of manualFriends) {
                     commenters.push({ type: 'npc', friend: f, name: f.name });
@@ -1135,14 +1133,30 @@ async function generateFriendComments(moment) {
             }
         }
 
-        // 随机加几个其他角色
-        const otherChats = appData.chatObjects.filter(c => c.id !== moment.chatId);
-        const otherCount = Math.min(otherChats.length, Math.max(1, Math.ceil(otherChats.length * 0.3)));
-        const shuffledOther = otherChats.sort(() => Math.random() - 0.5).slice(0, otherCount);
-        for (const oc of shuffledOther) {
-            commenters.push({ type: 'chat', chat: oc, name: oc.name });
+         // 只加入与该角色有明确关联的其他角色
+        // 判断规则：如果NPC好友的名字与某个角色名匹配，且绑定了对方，说明他们认识
+        const relatedChatIds = new Set();
+        appData.chatObjects.forEach(otherChat => {
+
+            if (otherChat.id === chat.id) return;
+            // 如果其他角色有NPC好友绑定了当前角色，说明他们认识
+            const hasMutualFriend = appData.npcFriends.some(f =>
+                (f.bindChatId === otherChat.id && f.name === chat.name) ||
+                (f.bindChatId === chat.id && f.name === otherChat.name)
+            );
+            if (hasMutualFriend) {
+                relatedChatIds.add(otherChat.id);
+            }
+        });
+
+        for (const relChatId of relatedChatIds) {
+            const relChat = appData.chatObjects.find(c => c.id === relChatId);
+            if (relChat) {
+                commenters.push({ type: 'chat', chat: relChat, name: relChat.name });
+            }
         }
     }
+
 
     if (commenters.length === 0) return;
 
