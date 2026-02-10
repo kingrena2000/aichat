@@ -232,22 +232,24 @@
                 <select id="momentsChatSelector" class="border border-wechat-darkGray rounded-lg px-2 py-1 text-sm focus:input-focus max-w-[120px] truncate">
                     <option value="">选择角色</option>
                 </select>
-                <!-- ★ 新增：好友管理按钮 -->
                 <button id="npcFriendsBtn" class="text-wechat-text p-2 rounded-full hover:bg-wechat-gray transition-colors" title="好友管理"><i class="fa fa-users"></i></button>
                 <button id="openPublishMomentBtn" class="bg-wechat-green text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-wechat-green/90 transition-colors"><i class="fa fa-pencil-square-o mr-1"></i>发动态</button>
                 <button id="closeMomentsPageBtn" class="text-wechat-text p-2 rounded-full hover:bg-wechat-gray transition-colors"><i class="fa fa-times"></i></button>
             </div>
         </header>
-        <div class="moments-cover">
-            <div class="moments-cover-bg"></div>
-            <div class="moments-user-info">
-                <span id="momentsUserName" class="moments-user-name">我</span>
-                <div id="momentsUserAvatar" class="moments-user-avatar"><i class="fa fa-user"></i></div>
+        <!-- ★ 改造：用一个滚动容器包裹封面+进度+列表，使封面可以被滚走 -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="moments-cover">
+                <div class="moments-cover-bg"></div>
+                <div class="moments-user-info">
+                    <span id="momentsUserName" class="moments-user-name">我</span>
+                    <div id="momentsUserAvatar" class="moments-user-avatar"><i class="fa fa-user"></i></div>
+                </div>
             </div>
+            <!-- 发布进度指示器 -->
+            <div id="momentsPublishingIndicator" class="hidden"></div>
+            <div id="momentsListContainer" class="moments-list-container bg-white"></div>
         </div>
-                <!-- 发布进度指示器 -->
-        <div id="momentsPublishingIndicator" class="hidden"></div>
-        <div id="momentsListContainer" class="flex-1 moments-list-container bg-white overflow-y-auto"></div>
     </div>
 
     <!-- ========== 朋友圈动态详情页 ========== -->
@@ -589,20 +591,21 @@
             <div class="p-4 space-y-4">
                 <!-- 好友列表 -->
                 <div id="npcFriendsListContainer" class="space-y-2 max-h-40 overflow-y-auto"></div>
-                <!-- 添加好友表单 -->
-                <div class="border-t border-wechat-darkGray pt-4 space-y-3">
-                    <h4 class="text-sm font-semibold text-wechat-lightText">手动添加好友</h4>
-                    <input type="text" id="npcFriendName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="好友名称">
-                    <input type="text" id="npcFriendRelation" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="与角色的关系（如：闺蜜、同事）">
-                    <input type="text" id="npcFriendPersonality" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="性格特点（如：活泼开朗）">
-                    <select id="npcFriendBindChat" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus">
-                        <option value="">不绑定（所有人共享）</option>
-                    </select>
-                    <div class="flex gap-2">
-                        <button onclick="addNpcFriend()" class="flex-1 bg-wechat-green text-white py-2 rounded-lg text-sm hover:bg-wechat-green/90"><i class="fa fa-plus mr-1"></i> 添加</button>
-                        <button onclick="openAiSuggestModal()" class="flex-1 bg-wechat-green/10 text-wechat-green py-2 rounded-lg text-sm hover:bg-wechat-green/20"><i class="fa fa-magic mr-1"></i> AI推荐</button>
-                    </div>
-                </div>
+<!-- 添加好友表单 -->
+<div class="border-t border-wechat-darkGray pt-4 space-y-3">
+    <h4 class="text-sm font-semibold text-wechat-lightText" id="npcFriendFormTitle">手动添加好友</h4>
+    <input type="text" id="npcFriendName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="好友名称">
+    <input type="text" id="npcFriendRelation" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="与角色的关系（如：闺蜜、同事）">
+    <input type="text" id="npcFriendPersonality" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="性格特点（如：活泼开朗）">
+    <select id="npcFriendBindChat" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus">
+        <option value="">不绑定（所有人共享）</option>
+    </select>
+    <div class="flex gap-2">
+        <button onclick="addNpcFriend()" id="npcFriendAddBtn" class="flex-1 bg-wechat-green text-white py-2 rounded-lg text-sm hover:bg-wechat-green/90"><i class="fa fa-plus mr-1"></i> <span>添加</span></button>
+        <button onclick="cancelEditNpcFriend()" id="npcFriendCancelEditBtn" class="flex-1 bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm" style="display:none;"><i class="fa fa-times mr-1"></i> 取消编辑</button>
+        <button onclick="openAiSuggestModal()" id="npcFriendAiBtn" class="flex-1 bg-wechat-green/10 text-wechat-green py-2 rounded-lg text-sm hover:bg-wechat-green/20"><i class="fa fa-magic mr-1"></i> AI推荐</button>
+    </div>
+</div>
             </div>
         </div>
     </div>
