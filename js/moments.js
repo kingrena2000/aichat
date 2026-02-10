@@ -1542,8 +1542,24 @@ function openNpcFriendsModal() {
 }
 
 function closeNpcFriendsModal() {
+    // 退出编辑状态
+    if (appData.npcFriendTempData && appData.npcFriendTempData.editingId) {
+        appData.npcFriendTempData.editingId = null;
+        updateNpcFriendFormUI(false);
+    }
+    // 清空表单
+    const nameEl = document.getElementById('npcFriendName');
+    const relEl = document.getElementById('npcFriendRelation');
+    const persEl = document.getElementById('npcFriendPersonality');
+    const bindEl = document.getElementById('npcFriendBindChat');
+    if (nameEl) nameEl.value = '';
+    if (relEl) relEl.value = '';
+    if (persEl) persEl.value = '';
+    if (bindEl) bindEl.value = '';
+
     DOM.npcFriendsModal.classList.add('hidden');
 }
+
 
 function renderNpcFriendsList() {
     const container = document.getElementById('npcFriendsListContainer');
@@ -1554,19 +1570,24 @@ function renderNpcFriendsList() {
         return;
     }
 
+    const editingId = appData.npcFriendTempData ? appData.npcFriendTempData.editingId : null;
+
     container.innerHTML = appData.npcFriends.map(f => {
         const bindChat = f.bindChatId ? appData.chatObjects.find(c => c.id === f.bindChatId) : null;
         const bindText = bindChat ? `绑定: ${bindChat.name}` : '共享好友';
-        return `<div class="npc-friend-item">
+        const isEditing = editingId === f.id;
+        return `<div class="npc-friend-item" style="${isEditing ? 'border:2px solid #07C160;border-radius:8px;' : ''}">
             <div class="npc-friend-avatar"><i class="fa fa-user"></i></div>
-            <div class="npc-friend-info">
+            <div class="npc-friend-info" onclick="editNpcFriend('${f.id}')" style="cursor:pointer;" title="点击编辑">
                 <div class="npc-friend-name">${escapeHtml(f.name)}</div>
                 <div class="npc-friend-meta">${escapeHtml(f.relationship || '')} · ${escapeHtml(f.personality || '')} · ${escapeHtml(bindText)}</div>
             </div>
-            <button class="npc-friend-delete" onclick="deleteNpcFriend('${f.id}')" title="删除"><i class="fa fa-trash"></i></button>
+            <button class="npc-friend-delete" onclick="event.stopPropagation();editNpcFriend('${f.id}')" title="编辑" style="color:#07C160;background:rgba(7,193,96,0.1);border:none;padding:4px 8px;border-radius:50%;cursor:pointer;margin-right:4px;"><i class="fa fa-pencil"></i></button>
+            <button class="npc-friend-delete" onclick="event.stopPropagation();deleteNpcFriend('${f.id}')" title="删除"><i class="fa fa-trash"></i></button>
         </div>`;
     }).join('');
 }
+
 
 function refreshNpcFriendBindSelector() {
     const sel = document.getElementById('npcFriendBindChat');
@@ -1589,32 +1610,114 @@ function addNpcFriend() {
     const name = nameEl ? nameEl.value.trim() : '';
     if (!name) { alert('请输入好友名称'); return; }
 
-    const friend = {
-        id: 'npc_' + generateUniqueId(),
-        name: name,
-        relationship: relEl ? relEl.value.trim() : '',
-        personality: persEl ? persEl.value.trim() : '',
-        bindChatId: bindEl ? bindEl.value : ''
-    };
+    const editingId = appData.npcFriendTempData ? appData.npcFriendTempData.editingId : null;
 
-    appData.npcFriends.push(friend);
-    saveNpcFriendsData();
+    if (editingId) {
+        // ===== 编辑模式：更新已有好友 =====
+        const friend = appData.npcFriends.find(f => f.id === editingId);
+        if (!friend) { cancelEditNpcFriend(); return; }
 
-    // 清空表单
-    if (nameEl) nameEl.value = '';
-    if (relEl) relEl.value = '';
-    if (persEl) persEl.value = '';
-    if (bindEl) bindEl.value = '';
+        friend.name = name;
+        friend.relationship = relEl ? relEl.value.trim() : '';
+        friend.personality = persEl ? persEl.value.trim() : '';
+        friend.bindChatId = bindEl ? bindEl.value : '';
 
-    renderNpcFriendsList();
-    logToUI(`添加NPC好友: ${name}`);
+        saveNpcFriendsData();
+        logToUI(`编辑NPC好友: ${name}`);
+        cancelEditNpcFriend();
+    } else {
+        // ===== 添加模式：新建好友 =====
+        const friend = {
+            id: 'npc_' + generateUniqueId(),
+            name: name,
+            relationship: relEl ? relEl.value.trim() : '',
+            personality: persEl ? persEl.value.trim() : '',
+            bindChatId: bindEl ? bindEl.value : ''
+        };
+
+        appData.npcFriends.push(friend);
+        saveNpcFriendsData();
+
+        // 清空表单
+        if (nameEl) nameEl.value = '';
+        if (relEl) relEl.value = '';
+        if (persEl) persEl.value = '';
+        if (bindEl) bindEl.value = '';
+
+        renderNpcFriendsList();
+        logToUI(`添加NPC好友: ${name}`);
+    }
 }
+
 
 function deleteNpcFriend(id) {
     if (!confirm('确定删除这个好友吗？')) return;
     appData.npcFriends = appData.npcFriends.filter(f => f.id !== id);
     saveNpcFriendsData();
     renderNpcFriendsList();
+}
+function editNpcFriend(id) {
+    const friend = appData.npcFriends.find(f => f.id === id);
+    if (!friend) return;
+
+    if (!appData.npcFriendTempData) appData.npcFriendTempData = {};
+    appData.npcFriendTempData.editingId = id;
+
+    // 填充表单
+    const nameEl = document.getElementById('npcFriendName');
+    const relEl = document.getElementById('npcFriendRelation');
+    const persEl = document.getElementById('npcFriendPersonality');
+    const bindEl = document.getElementById('npcFriendBindChat');
+
+    if (nameEl) nameEl.value = friend.name || '';
+    if (relEl) relEl.value = friend.relationship || '';
+    if (persEl) persEl.value = friend.personality || '';
+    if (bindEl) bindEl.value = friend.bindChatId || '';
+
+    updateNpcFriendFormUI(true);
+    renderNpcFriendsList();
+
+    if (nameEl) {
+        nameEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => nameEl.focus(), 300);
+    }
+}
+
+function cancelEditNpcFriend() {
+    if (!appData.npcFriendTempData) appData.npcFriendTempData = {};
+    appData.npcFriendTempData.editingId = null;
+
+    const nameEl = document.getElementById('npcFriendName');
+    const relEl = document.getElementById('npcFriendRelation');
+    const persEl = document.getElementById('npcFriendPersonality');
+    const bindEl = document.getElementById('npcFriendBindChat');
+
+    if (nameEl) nameEl.value = '';
+    if (relEl) relEl.value = '';
+    if (persEl) persEl.value = '';
+    if (bindEl) bindEl.value = '';
+
+    updateNpcFriendFormUI(false);
+    renderNpcFriendsList();
+}
+
+function updateNpcFriendFormUI(isEditing) {
+    const titleEl = document.getElementById('npcFriendFormTitle');
+    const addBtn = document.getElementById('npcFriendAddBtn');
+    const cancelBtn = document.getElementById('npcFriendCancelEditBtn');
+    const aiBtn = document.getElementById('npcFriendAiBtn');
+
+    if (isEditing) {
+        if (titleEl) titleEl.textContent = '✏️ 编辑好友';
+        if (addBtn) addBtn.innerHTML = '<i class="fa fa-check mr-1"></i> <span>保存修改</span>';
+        if (cancelBtn) cancelBtn.style.display = '';
+        if (aiBtn) aiBtn.style.display = 'none';
+    } else {
+        if (titleEl) titleEl.textContent = '手动添加好友';
+        if (addBtn) addBtn.innerHTML = '<i class="fa fa-plus mr-1"></i> <span>添加</span>';
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        if (aiBtn) aiBtn.style.display = '';
+    }
 }
 
 // ==================== AI推荐好友 ====================
