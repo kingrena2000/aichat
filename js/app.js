@@ -1,10 +1,65 @@
-/* =========================================================================
-   微信风格多AI聊天 - 主入口 (app.js)
+/*=========================================================================微信风格多AI聊天 - 主入口 (app.js)
+   v5.3+ 设置同步机制
    ========================================================================= */
+
+// ==================== 设置同步机制 ====================
+const SETTINGS_SYNC_KEY = 'wechat_ai_settings';
+
+// 从外部 settings.html 读取设置，合并到 appData
+function syncSettingsFromExternal() {
+    try {
+        const raw = localStorage.getItem(SETTINGS_SYNC_KEY);
+        if (!raw) return;
+        const ext = JSON.parse(raw);
+        if (!appData || !appData.apiConfig) return;
+        const c = appData.apiConfig;
+        if (ext.baseUrl !== undefined) c.baseUrl = ext.baseUrl;
+        if (ext.apiKey !== undefined) c.apiKey = ext.apiKey;
+        if (ext.modelName !== undefined) c.modelName = ext.modelName;
+        if (ext.temperature !== undefined) c.temperature = ext.temperature;
+        if (ext.historyTurns !== undefined) c.historyTurns = ext.historyTurns;
+        if (ext.diaryGenerationTurns !== undefined) c.diaryGenerationTurns = ext.diaryGenerationTurns;
+        if (ext.globalSystemPrompt !== undefined) c.globalSystemPrompt = ext.globalSystemPrompt;
+        if (ext.imageGenBaseUrl !== undefined) c.imageGenBaseUrl = ext.imageGenBaseUrl;
+        if (ext.imageGenApiKey !== undefined) c.imageGenApiKey = ext.imageGenApiKey;
+        if (ext.imageGenModelName !== undefined) c.imageGenModelName = ext.imageGenModelName;
+        if (ext.imageGenInterface !== undefined) c.imageGenInterfaceType = ext.imageGenInterface;
+        if (ext.auxBaseUrl !== undefined) c.auxBaseUrl = ext.auxBaseUrl;
+        if (ext.auxApiKey !== undefined) c.auxApiKey = ext.auxApiKey;
+        if (ext.auxModelName !== undefined) c.auxModelName = ext.auxModelName;
+        if (ext.userName && appData.userInfo) appData.userInfo.name = ext.userName;
+        if (ext.userAvatar && appData.userInfo) appData.userInfo.avatar = { type: 'url', url: ext.userAvatar };
+    } catch (e) { console.log('syncSettingsFromExternal:', e.message); }
+}
+
+// 将 appData 的设置写入共享key，供 settings.html 读取
+function syncSettingsToExternal() {
+    try {
+        const c = appData.apiConfig || {};
+        const u = appData.userInfo || {};
+        localStorage.setItem(SETTINGS_SYNC_KEY, JSON.stringify({
+            baseUrl: c.baseUrl || '',
+            apiKey: c.apiKey || '',
+            modelName: c.modelName || '',
+            temperature: c.temperature || 0.7,
+            historyTurns: c.historyTurns || 10,
+            diaryGenerationTurns: c.diaryGenerationTurns || 30,
+            globalSystemPrompt: c.globalSystemPrompt || '',
+            userName: u.name || 'user',
+            userAvatar: (u.avatar && u.avatar.url) || '',
+            imageGenBaseUrl: c.imageGenBaseUrl || '',
+            imageGenApiKey: c.imageGenApiKey || '',
+            imageGenModelName: c.imageGenModelName || '',
+            imageGenInterface: c.imageGenInterfaceType || 'chat',
+            auxBaseUrl: c.auxBaseUrl || '',
+            auxApiKey: c.auxApiKey || '',
+            auxModelName: c.auxModelName || '',}));
+    } catch (e) { console.log('syncSettingsToExternal:', e.message); }
+}
 
 // 定义全局 DOM 对象
 window.DOM = {
-    // 聊天列表
+    //聊天列表
     chatListPage: document.getElementById('chatListPage'),
     chatListContainer: document.getElementById('chatListContainer'),
     emptyChatList: document.getElementById('emptyChatList'),
@@ -140,8 +195,6 @@ window.DOM = {
     momentCommentSendBtn: document.getElementById('momentCommentSendBtn'),
     publishMomentModal: document.getElementById('publishMomentModal'),
     closePublishMomentModalBtn: document.getElementById('closePublishMomentModalBtn'),
-    publishMomentAvatar: document.getElementById('publishMomentAvatar'),
-    publishMomentName: document.getElementById('publishMomentName'),
     publishModeAuto: document.getElementById('publishModeAuto'),
     publishModeManual: document.getElementById('publishModeManual'),
     publishAutoOptions: document.getElementById('publishAutoOptions'),
@@ -158,7 +211,7 @@ window.DOM = {
     imageGenModelName: document.getElementById('imageGenModelName'),
     imageGenInterfaceChat: document.getElementById('imageGenInterfaceChat'),
     imageGenInterfaceImages: document.getElementById('imageGenInterfaceImages'),
-    // 辅助API配置
+    //辅助API配置
     auxBaseUrl: document.getElementById('auxBaseUrl'),
     auxApiKey: document.getElementById('auxApiKey'),
     auxModelName: document.getElementById('auxModelName'),
@@ -170,7 +223,6 @@ window.DOM = {
     logModal: document.getElementById('logModal'),
     closeLogModalBtn: document.getElementById('closeLogModalBtn'),
     logOutput: document.getElementById('logOutput'),
-    
     // 表情功能
     stickerPanel: document.getElementById('stickerPanel'),
     stickerToggleBtn: document.getElementById('stickerToggleBtn'),
@@ -210,6 +262,7 @@ window.DOM = {
 // 初始化
 function init() {
     loadDataFromStorage();
+    syncSettingsFromExternal(); // ★ 从settings.html 同步
     loadUIData();
     renderChatList();
     setupEventListeners();
@@ -330,7 +383,7 @@ const handleEditChatAvatarUrl = () => handleAvatarUrl(DOM.editChatAvatarUrl, DOM
 function openAddChatModal() {
     appData.newChatTempData.avatar = { type: 'default', url: '' };
     DOM.newChatName.value = 'AI助手';
-    DOM.newChatSystemPrompt.value = '你是一个友好、helpful 的AI助手。';
+    DOM.newChatSystemPrompt.value = '你是一个友好、helpful的AI助手。';
     DOM.newChatAvatarUrl.value = '';
     DOM.newChatAvatarUrlContainer.classList.add('hidden');
     updateNewChatAvatarPreview();
@@ -356,7 +409,6 @@ async function fetchModelList() {
             headers: { 'Authorization': `Bearer ${apiKey}` }
         });
         if (!response.ok) throw new Error(`获取失败: ${response.status}`);
-        
         const data = await response.json();
         const models = data.data || [];
         if (models.length === 0) { alert('未获取到任何模型'); return; }
@@ -380,8 +432,7 @@ async function fetchModelList() {
         }
         logToUI(`获取到 ${models.length} 个模型`);
     } catch (e) {
-        alert(`获取模型列表失败: ${e.message}`);
-        logToUI(`获取模型列表失败: ${e.message}`);
+        alert(`获取模型列表失败: ${e.message}`);logToUI(`获取模型列表失败: ${e.message}`);
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fa fa-refresh"></i>';
@@ -391,11 +442,9 @@ async function fetchModelList() {
 // 保存 API 设置
 function saveApiSettings(e) {
     e.preventDefault();
-    // form内已无submit按钮，直接调用统一保存逻辑
     saveAllSettingsClick();
 }
 function saveAllSettingsClick() {
-    // 复用 saveApiSettings 的逻辑，但不需要 form event
     appData.apiConfig = {
         ...appData.apiConfig,
         baseUrl: DOM.baseUrl.value.trim() || 'https://api.openai.com/v1',
@@ -415,6 +464,7 @@ function saveAllSettingsClick() {
     };
     appData.userInfo = { name: DOM.userName.value.trim() || 'user', avatar: { ...appData.userAvatarTempData } };
     saveDataToStorage();
+    syncSettingsToExternal(); // ★ 同步到外部
     const btn = document.getElementById('saveAllSettingsBtn');
     if (btn) {
         const orig = btn.innerHTML;
@@ -493,7 +543,7 @@ function setupEventListeners() {
         closeEditDiaryModalBtn: { click: closeEditDiaryModal },
         cancelEditDiaryBtn: { click: closeEditDiaryModal },
         saveEditDiaryBtn: { click: saveDiaryEntry },
-        // 朋友圈功能事件
+        //朋友圈功能事件
         openPublishMomentBtn: { click: openPublishMomentModal },
         closePublishMomentModalBtn: { click: closePublishMomentModal },
         publishModeAuto: { click: () => switchPublishMode('auto') },
@@ -527,7 +577,7 @@ function setupEventListeners() {
             }
         }
     }
-    // 朋友圈额外按钮绑定（HTML中ID与DOM对象不一致的按钮）
+    //朋友圈额外按钮绑定
     const publishBtn2 = document.getElementById('publishMomentBtn2');
     if (publishBtn2) publishBtn2.addEventListener('click', openPublishMomentModal);
 
@@ -539,13 +589,19 @@ function setupEventListeners() {
 
     const sendMomentCommentBtn = document.getElementById('sendMomentCommentBtn');
     if (sendMomentCommentBtn) sendMomentCommentBtn.addEventListener('click', sendMomentComment);
+    if (DOM.momentsChatSelector) {
+        DOM.momentsChatSelector.addEventListener('change', () => {
+            const chatId = DOM.momentsChatSelector.value;
+            appData.momentsTempData.chatId = chatId;
+            updatePublishModeByChat(chatId);
+        });
+    }
     
-    // 通用模态框关闭 (点击背景)
+    // 通用模态框关闭
     [DOM.addChatModal, DOM.confirmDeleteModal, DOM.restoreModal, DOM.editDiaryEntryModal, DOM.logModal, DOM.addStickerModal, DOM.publishMomentModal, DOM.npcFriendsModal, DOM.aiSuggestFriendsModal].forEach(el => el && el.addEventListener('click', e => {
         if (e.target === el) el.classList.add('hidden')
     }));
 
-    // 阻止冒泡
     const modals = [DOM.addChatModal, DOM.confirmDeleteModal, DOM.restoreModal, DOM.editDiaryEntryModal, DOM.logModal, DOM.addStickerModal, DOM.publishMomentModal, DOM.npcFriendsModal, DOM.aiSuggestFriendsModal];
     modals.forEach(modal => {
         if (modal && modal.children) {
@@ -553,7 +609,6 @@ function setupEventListeners() {
         }
     });
     
-    // 设置页和其他侧滑页的阻止冒泡
     [DOM.settingsPage, DOM.chatDetailPage, DOM.diaryListPage, DOM.diaryDetailPage, DOM.momentsPage, DOM.momentDetailPage].forEach(c => c && c.addEventListener('click', e => e.stopPropagation()));
 
     // 右键菜单
@@ -572,7 +627,6 @@ function setupEventListeners() {
         }
     });
 
-    // 表情面板点击委托
     DOM.emojiGrid.addEventListener('click', (e) => {
         const btn = e.target.closest('.emoji-item');
         if (btn) insertEmoji(btn.dataset.emoji);
@@ -589,12 +643,10 @@ function setupEventListeners() {
         }
     });
 
-    // 点击外部关闭
     document.addEventListener('click', (e) => {
         if (!DOM.stickerPanel.contains(e.target) && !DOM.stickerToggleBtn.contains(e.target)) {
             closeStickerPanel();
-        }
-        DOM.messageContextMenu.classList.add('hidden');
+        }DOM.messageContextMenu.classList.add('hidden');
     });
 
     window.addEventListener('resize', adjustHeights);

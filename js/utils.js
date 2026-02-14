@@ -134,22 +134,19 @@ async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
         try {
             const response = await fetch(url, options);
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`API request failed with status ${response.status}: ${errorData.error?.message || response.statusText}`);
+                const errorText = await response.text().catch(() => 'Unknown error');
+                throw new Error(`API request failed with status ${response.status}: ${errorText.substring(0, 200)}`);
             }
-            const data = await response.json();
-            // 增加对响应内容的有效性检查
-            if (!data.choices || data.choices.length === 0 || !data.choices[0].message?.content) {
-                throw new Error('Invalid response content (e.g., empty choices or content).');
-            }
-            return data; // 直接返回解析后的有效数据
+            return await response.json();
         } catch (error) {
             logToUI(`Attempt ${attempt} of ${retries} failed: ${error.message}`);
             if (attempt < retries) {
-                await new Promise(resolve => setTimeout(resolve, delay));
+                const waitTime = delay * attempt + Math.random() * 1000;
+                await new Promise(resolve => setTimeout(resolve, waitTime));
             } else {
                 throw new Error('AllRetryAttemptsFailed');
             }
         }
     }
 }
+

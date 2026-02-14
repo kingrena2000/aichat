@@ -145,15 +145,15 @@ function getImageGenApiConfig() {
 async function callAuxApi(messages, temperature) {
     const aux = getAuxApiConfig();
     if (!aux.apiKey) throw new Error('未配置API Key');
-    const data = await fetchWithRetry(`${aux.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${aux.apiKey}` },
-        body: JSON.stringify({
-            model: aux.modelName,
-            messages: messages,
-            temperature: temperature || 0.8
-        })
-    });
+const data = await fetchWithRetry(`${aux.baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${aux.apiKey}` },
+    body: JSON.stringify({
+        model: aux.modelName,
+        messages: messages,
+        temperature: temperature || 0.8
+    })
+}, 5, 2000);
     return data.choices[0].message.content;
 }
 
@@ -526,7 +526,6 @@ function parseListedFriends(text) {
 async function renderMomentsList() {
     if (!DOM.momentsListContainer) return;
     updateMomentsCover();
-    refreshMomentsChatSelector();
 
     if (appData.moments.length === 0) {
         DOM.momentsListContainer.innerHTML = `<div class="moment-empty">
@@ -824,6 +823,12 @@ async function renderMomentDetail(momentId) {
         <div class="moment-comments-section">
             <div class="moment-comments-title">评论</div>
             ${commentsHtml}
+            <div style="text-align:center;padding:12px 0;">
+                <button id="refreshCommentsBtn" onclick="refreshMomentComments('${moment.id}')" 
+                    style="color:#576b95;font-size:13px;background:none;border:none;cursor:pointer;padding:8px 16px;">
+                    <i class="fa fa-refresh" style="margin-right:4px;"></i>邀请好友评论
+                </button>
+            </div>			
             <div id="momentAiReplyingIndicator" class="moment-ai-replying" style="display:none;">
                 <i class="fa fa-spinner"></i> <span>好友们正在回复...</span>
             </div>
@@ -1110,7 +1115,7 @@ async function generateFriendComments(moment) {
             commenters.push({ type: 'npc', friend: f, name: f.name });
         }
     } else {
-        // 角色发的 → 手动好友 + 临时好友 + 互相绑定的角色（不随机拉无关角色）
+        // 角色发的 → 手动好友 + 临时好友（不拉其他角色）
         const chat = appData.chatObjects.find(c => c.id === moment.chatId);
         if (!chat) return;
 
@@ -1130,29 +1135,6 @@ async function generateFriendComments(moment) {
             const tempFriends = await getOrCreateTempFriends(chat);
             for (const tf of tempFriends) {
                 commenters.push({ type: 'temp', tempFriend: tf, name: tf.name });
-            }
-        }
-
-         // 只加入与该角色有明确关联的其他角色
-        // 判断规则：如果NPC好友的名字与某个角色名匹配，且绑定了对方，说明他们认识
-        const relatedChatIds = new Set();
-        appData.chatObjects.forEach(otherChat => {
-
-            if (otherChat.id === chat.id) return;
-            // 如果其他角色有NPC好友绑定了当前角色，说明他们认识
-            const hasMutualFriend = appData.npcFriends.some(f =>
-                (f.bindChatId === otherChat.id && f.name === chat.name) ||
-                (f.bindChatId === chat.id && f.name === otherChat.name)
-            );
-            if (hasMutualFriend) {
-                relatedChatIds.add(otherChat.id);
-            }
-        });
-
-        for (const relChatId of relatedChatIds) {
-            const relChat = appData.chatObjects.find(c => c.id === relChatId);
-            if (relChat) {
-                commenters.push({ type: 'chat', chat: relChat, name: relChat.name });
             }
         }
     }
@@ -1183,6 +1165,33 @@ async function generateFriendComments(moment) {
     }
 }
 
+// ==================== 手动刷新好友评论 ====================
+
+async function refreshMomentComments(momentId) {
+    const moment = appData.moments.find(m => m.id === momentId);
+    if (!moment) return;
+    if (!appData.apiConfig.apiKey) { alert('请先配置API'); return; }
+
+    // 禁用按钮防重复点击
+    const btn = document.getElementById('refreshCommentsBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 生成中...';
+    }
+
+    showAiReplyingIndicator('正在邀请好友评论...');
+
+    try {
+        await generateFriendComments(moment);
+    } catch (e) {
+        logToUI(`手动刷新评论失败: ${e.message}`);
+    } finally {
+        hideAiReplyingIndicator();
+        if (appData.momentDetailId === momentId) renderMomentDetail(momentId);
+        renderMomentsList();
+    }
+}
+
 async function generateSingleChatComment(moment, chat) {
     const isDetailOpen = appData.momentDetailId === moment.id;
 
@@ -1192,15 +1201,15 @@ async function generateSingleChatComment(moment, chat) {
         const publisher = getMomentPublisherInfo(moment);
         const systemPrompt = `${appData.apiConfig.globalSystemPrompt}\n\n${chat.systemPrompt}\n\n${publisher.name}发了一条朋友圈：\n"${moment.content}"\n\n请你用简短自然的口吻评论这条朋友圈（不超过30字），像真人朋友圈互动一样。不要用引号包裹回复。只输出评论内容。`;
 
-        const data = await fetchWithRetry(`${appData.apiConfig.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${appData.apiConfig.apiKey}` },
-            body: JSON.stringify({
-                model: appData.apiConfig.modelName,
-                messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: '请评论这条朋友圈' }],
-                temperature: 0.9
-            })
-        });
+const data = await fetchWithRetry(`${appData.apiConfig.baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${appData.apiConfig.apiKey}` },
+    body: JSON.stringify({
+        model: appData.apiConfig.modelName,
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: '请评论这条朋友圈' }],
+        temperature: 0.9
+    })
+}, 5, 2000);
 
         const reply = cleanAiResponse(data.choices[0].message.content);
         if (reply) {
@@ -1330,24 +1339,15 @@ function switchPublishMode(mode) {
 // ==================== 发布朋友圈 ====================
 
 function openPublishMomentModal() {
-    const chatId = DOM.momentsChatSelector ? DOM.momentsChatSelector.value : '';
-    if (!chatId) {
-        alert('请先选择一个角色或"我"');
-        return;
-    }
+    // 刷新选择框（现在在模态框内）
+    refreshMomentsChatSelector();
+
+    // 默认选中第一个
+    const chatId = DOM.momentsChatSelector ? DOM.momentsChatSelector.value : '__user__';
     appData.momentsTempData.chatId = chatId;
 
-    if (chatId === '__user__') {
-        // 用户发布：只能手动
-        appData.momentsTempData.mode = 'manual';
-        if (DOM.publishModeAuto) DOM.publishModeAuto.classList.remove('active');
-        if (DOM.publishModeManual) DOM.publishModeManual.classList.add('active');
-        if (DOM.publishModeAuto) DOM.publishModeAuto.disabled = true;
-    } else {
-        appData.momentsTempData.mode = 'auto';
-        if (DOM.publishModeAuto) { DOM.publishModeAuto.classList.add('active'); DOM.publishModeAuto.disabled = false; }
-        if (DOM.publishModeManual) DOM.publishModeManual.classList.remove('active');
-    }
+    // 根据选择更新模式
+    updatePublishModeByChat(chatId);
 
     // 图片模式默认
     setImageMode(appData.momentsTempData.imageMode || 'ai');
@@ -1356,6 +1356,18 @@ function openPublishMomentModal() {
     if (DOM.publishMomentImages) DOM.publishMomentImages.value = '';
     DOM.publishMomentModal.classList.remove('hidden');
 }
+function updatePublishModeByChat(chatId) {
+    if (chatId === '__user__') {
+        appData.momentsTempData.mode = 'manual';
+        switchPublishMode('manual');
+        if (DOM.publishModeAuto) DOM.publishModeAuto.disabled = true;
+    } else {
+        appData.momentsTempData.mode = 'auto';
+        switchPublishMode('auto');
+        if (DOM.publishModeAuto) DOM.publishModeAuto.disabled = false;
+    }
+}
+
 
 function closePublishMomentModal() {
     DOM.publishMomentModal.classList.add('hidden');

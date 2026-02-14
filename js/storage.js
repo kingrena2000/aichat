@@ -82,11 +82,14 @@ function saveDataToStorage() {
         localStorage.setItem('aiMultiChatUserInfo', JSON.stringify(appData.userInfo));
         if (appData.activeChatId) {
             localStorage.setItem('aiMultiChatActiveId', appData.activeChatId);
+
         }
     } catch (e) {
         console.error("保存数据到localStorage失败:", e);
         alert("保存数据失败，可能是由于存储空间已满。");
     }
+	// 在saveDataToStorage 函数末尾添加
+    if (typeof syncSettingsToExternal === 'function') syncSettingsToExternal();	
 }
 
 // 加载UI数据 (填充设置页面的表单)

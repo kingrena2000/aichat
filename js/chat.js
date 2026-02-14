@@ -1,6 +1,34 @@
-/* =========================================================================
-   微信风格多AI聊天 - 聊天功能模块 (chat.js)
+/*=========================================================================微信风格多AI聊天 - 聊天功能模块 (chat.js)
    ========================================================================= */
+
+// ★ 动态显示打字指示器（注入到聊天内容区底部，像一条真实消息）
+function showTypingIndicator() {
+    hideTypingIndicator(); // 先清除已有的
+    const chat = appData.chatObjects.find(c => c.id === appData.activeChatId);
+    if (!chat) return;
+
+    // 构建与AI消息一致的头像HTML
+    const avatarHtml = (chat.avatar && chat.avatar.type !== 'default' && chat.avatar.url)
+        ? `<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(chat.avatar.url)}" class="w-full h-full object-cover"></div>`
+        : `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-robot"></i></div>`;
+
+    const el = document.createElement('div');
+    el.id = 'typingBubble';
+    el.className = 'flex items-start mb-6';
+    el.innerHTML = `${avatarHtml}<div class="chat-bubble-ai"><p class="text-sm text-wechat-lightText">${escapeHtml(chat.name)}正在输入<span class="typing-dot-anim"><span></span><span></span><span></span></span></p></div>`;
+
+    DOM.chatPageContainer.appendChild(el);
+    //滚动到底部，确保用户看到
+    setTimeout(() => {
+        if (DOM.chatPageContainer) DOM.chatPageContainer.scrollTop = DOM.chatPageContainer.scrollHeight;
+    }, 50);
+}
+
+// ★ 移除打字指示器
+function hideTypingIndicator() {
+    const el = document.getElementById('typingBubble');
+    if (el) el.remove();
+}
 
 // 渲染聊天列表
 function renderChatList() {
@@ -11,7 +39,6 @@ function renderChatList() {
     }
     DOM.emptyChatList.classList.add('hidden');
     
-    // 按最后一条消息时间或创建时间倒序排列
     [...appData.chatObjects].sort((a, b) => (b.messages.slice(-1)[0]?.timestamp || b.createdAt) - (a.messages.slice(-1)[0]?.timestamp || a.createdAt)).forEach(c => {
         const iC = document.createElement('div');
         iC.className = 'chat-item-container relative';
@@ -23,8 +50,7 @@ function renderChatList() {
         const l = c.messages.length > 0 ? c.messages[c.messages.length - 1].content : '暂无消息';
         
         i.innerHTML = `<div class="w-12 h-12 rounded-full overflow-hidden mr-3 flex-shrink-0">
-            ${c.avatar && c.avatar.type !== 'default' && c.avatar.url ? 
-            `<img src="${escapeHtml(c.avatar.url)}" alt="${escapeHtml(c.name)}" class="w-full h-full object-cover">` : 
+            ${c.avatar && c.avatar.type !== 'default' && c.avatar.url ?`<img src="${escapeHtml(c.avatar.url)}" alt="${escapeHtml(c.name)}" class="w-full h-full object-cover">` : 
             `<div class="w-full h-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-robot"></i></div>`}
         </div>
         <div class="flex-1 min-w-0">
@@ -73,7 +99,7 @@ function createNewChat() {
         id: generateUniqueId(),
         name: DOM.newChatName.value.trim() || 'AI助手',
         avatar: { ...appData.newChatTempData.avatar },
-        systemPrompt: DOM.newChatSystemPrompt.value.trim() || '你是一个友好、helpful 的AI助手。',
+        systemPrompt: DOM.newChatSystemPrompt.value.trim() || '你是一个友好、helpful的AI助手。',
         messages: [],
         diaries: [],
         lastDiaryIndex: 0,
@@ -81,10 +107,9 @@ function createNewChat() {
     };
     appData.chatObjects.push(nC);
     saveDataToStorage();
-    closeAddChatModal(); // Defined in app.js
+    closeAddChatModal();
     renderChatList();
-    if (typeof renderDiaryList === 'function' && isDiaryPageVisible()) renderDiaryList();
-    openChat(nC.id);
+    if (typeof renderDiaryList === 'function' && isDiaryPageVisible()) renderDiaryList();openChat(nC.id);
 }
 
 // 保存聊天详情修改
@@ -101,8 +126,7 @@ function saveChatDetail() {
     saveDataToStorage();
     renderChatList();
     if (typeof renderDiaryList === 'function' && isDiaryPageVisible()) renderDiaryList();
-    if (appData.activeChatId === updatedChat.id) openChat(updatedChat.id);
-    DOM.chatDetailPage.classList.add('translate-x-full');
+    if (appData.activeChatId === updatedChat.id) openChat(updatedChat.id);DOM.chatDetailPage.classList.add('translate-x-full');
 }
 
 // 打开聊天界面
@@ -112,10 +136,10 @@ function openChat(id) {
     appData.activeChatId = id;
     saveDataToStorage();
     DOM.chatPageTitle.textContent = c.name;
-    DOM.chatPageAvatar.innerHTML = c.avatar && c.avatar.type !== 'default' && c.avatar.url ? 
+    DOM.chatPageAvatar.innerHTML = c.avatar && c.avatar.type !== 'default' && c.avatar.url ?
         `<img src="${escapeHtml(c.avatar.url)}" alt="${escapeHtml(c.name)}" class="w-full h-full object-cover">` : 
         `<div class="w-full h-full rounded-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-robot"></i></div>`;
-    DOM.chatPageTypingText.textContent = `${c.name}正在输入中...`;
+    //★ 不再设置静态 typing text，改为动态创建时读取
     renderChatMessages(c.messages);
     DOM.chatListPage.classList.add('hidden');
     DOM.chatPage.classList.remove('hidden');
@@ -134,7 +158,7 @@ function openChatDetail(id) {
     appData.editChatTempData = { chatId: id, avatar: { ...c.avatar } };
     DOM.editChatName.value = c.name;
     DOM.editChatSystemPrompt.value = c.systemPrompt;
-    updateEditChatAvatarPreview(); // Defined in app.js
+    updateEditChatAvatarPreview();
     DOM.editAvatarContainer.classList.add('hidden');
     DOM.chatDetailPage.classList.remove('translate-x-full');
 }
@@ -142,7 +166,7 @@ function openChatDetail(id) {
 // 渲染聊天消息
 function renderChatMessages(m) {
     DOM.chatPageContainer.innerHTML = m.length === 0 ? 
-        `<div class="flex flex-col items-center justify-center h-full text-wechat-lightText py-10"><i class="fa fa-comments-o text-4xl mb-3 opacity-50"></i><p class="text-sm">发送第一条消息开始对话吧</p></div>` : '';
+        `<div class="flex flex-col items-center justify-center h-full text-wechat-lightText py-10"><i class="fa fa-comments-o text-4xl mb-3opacity-50"></i><p class="text-sm">发送第一条消息开始对话吧</p></div>` : '';
     if (m.length === 0) return;
     
     m.forEach((g, x) => {
@@ -160,8 +184,7 @@ function renderChatMessages(m) {
             `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-robot"></i></div>` :
             `<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(c.avatar.url)}" class="w-full h-full object-cover"></div>`;
         
-        // 解析表情
-        const parsedContent = parseMessageStickers(g.content); // Defined in stickers.js
+        const parsedContent = parseMessageStickers(g.content);
         
         e.innerHTML = g.role === 'user' ?
             `<div class="chat-bubble-user"><p class="text-sm">${parsedContent}</p></div>${uA}` :
@@ -185,16 +208,16 @@ async function sendOrRegenerate(contextMessages) {
     const chat = appData.chatObjects[chatIndex];
     if (!appData.apiConfig.apiKey) { alert('请先在设置中填写API Key'); togglePage('settings', true); return; }
 
-    DOM.chatPageTypingIndicator.classList.add('show');
+    //★ 改用动态注入的打字指示器
+    showTypingIndicator();
     try {
         const diarySummary = chat.diaries.map(d => `[过往日记摘要]:\n${d.content}`).join('\n\n');
         const longTermMemoryContext = diarySummary ? `这是你和用户之间过往的对话摘要，请将此作为你的长期记忆：\n${diarySummary}\n\n` : '';
         
-        // 表情提示
         let stickerHint = '';
         if (appData.stickers.length > 0) {
             const stickerNames = appData.stickers.map(s => `:${s.name}:`).join(' ');
-            stickerHint = `\n\n【可用表情】你可以在回复中适当使用以下表情来增加表达效果：${stickerNames}\n使用格式：直接写 :表情名: 即可，例如"我很开心 :开心:"\n使用规则：
+            stickerHint = `\n\n【可用表情】你可以在回复中适当使用以下表情来增加表达效果：${stickerNames}\n使用格式：直接写:表情名: 即可，例如"我很开心 :开心:"\n使用规则：
 - 每次回复最多只能用1个表情
 - 表情必须单独放在回复的最后一行
 - 不要把表情和文字写在同一行
@@ -217,7 +240,6 @@ async function sendOrRegenerate(contextMessages) {
         
         const apiPayload = [{ role: 'system', content: systemPrompt }, ...apiMessages];
         
-        // 调用API
         const data = await fetchWithRetry(
             `${appData.apiConfig.baseUrl}/chat/completions`, 
             { 
@@ -229,16 +251,14 @@ async function sendOrRegenerate(contextMessages) {
 
         const cleanedContent = cleanAiResponse(data.choices[0].message.content);
 
-        // 处理表情
         const stickerPattern = /:([^:\s]+):/g;
         const allStickers = cleanedContent.match(stickerPattern) || [];
         const lastSticker = allStickers.length > 0 ? allStickers[allStickers.length - 1] : null;
         const validSticker = lastSticker && appData.stickers.find(s => `:${s.name}:` === lastSticker) ? lastSticker : null;
 
-        // 分割文字和表情
         let textContent = cleanedContent.replace(stickerPattern, '').trim();
         const firstNewlineIndex = textContent.indexOf('\n');
-        let messageParts = (firstNewlineIndex === -1) 
+        let messageParts = (firstNewlineIndex === -1)
             ? [textContent] 
             : [textContent.substring(0, firstNewlineIndex), textContent.substring(firstNewlineIndex + 1)];
 
@@ -255,14 +275,12 @@ async function sendOrRegenerate(contextMessages) {
         }
         
         saveDataToStorage();
+        // ★ renderChatMessages 会清空容器，typing bubble 也会被清除
         renderChatMessages(chat.messages);
         
-        // 尝试触发日记生成 (Defined in diary.js)
         if (typeof checkAndTriggerDiaryGeneration === 'function') {
             checkAndTriggerDiaryGeneration(chat);
-        }
-
-    } catch (e) {
+        }} catch (e) {
         if (e.message === 'AllRetryAttemptsFailed') {
             logToUI('All retry attempts failed. Adding busy message.');
             chat.messages.push({
@@ -276,7 +294,8 @@ async function sendOrRegenerate(contextMessages) {
             alert(`出错了：${e.message}`);
         }
     } finally {
-        DOM.chatPageTypingIndicator.classList.remove('show');
+        // ★ 兜底清除（renderChatMessages已经清了，这里做保险）
+        hideTypingIndicator();
     }
 }
 
@@ -287,7 +306,7 @@ async function regenerateAiResponse(targetIndex) {
     if (!chat || targetIndex < 0 || chat.messages[targetIndex].role !== 'assistant') return;
     
     const isMidConversation = chat.messages.some((msg, index) => index > targetIndex);
-    if (isMidConversation) { 
+    if (isMidConversation) {
         if (!confirm("您正在尝试重新生成一条历史消息。\n\n确认后，此消息及其之后的所有对话都将被删除并重新生成。\n\n您确定要继续吗？")) return; 
     }
     
@@ -384,7 +403,7 @@ async function sendChatMessage() {
     saveDataToStorage();
     renderChatMessages(chat.messages);
     
-    closeStickerPanel(); // Defined in stickers.js
+    closeStickerPanel();
     DOM.chatPageMessageInput.value = '';
     DOM.chatPageMessageInput.style.height = 'auto';
     
