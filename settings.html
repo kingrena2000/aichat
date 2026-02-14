@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>设置</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5; color: #333; min-height: 100vh;}
+        .settings-header {
+            position: sticky; top: 0; z-index: 10;
+            background: #fff; border-bottom: 1px solid #e5e5e5;
+            display: flex; align-items: center; padding: 12px 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .settings-back {
+            width: 36px; height: 36px; border-radius: 50%;
+            border: none; background: none; color: #333;
+            font-size: 16px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; margin-right: 8px;
+        }
+        .settings-back:hover { background: #f0f0f0; }
+        .settings-title { font-size: 18px; font-weight: 600; }
+        .settings-body { padding: 16px; padding-bottom: 80px; max-width: 540px; margin: 0 auto; }
+        .settings-section {
+            background: #fff; border-radius: 12px;
+            margin-bottom: 16px; overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .settings-section-title {
+            font-size: 13px; font-weight: 600; color: #888;
+            padding: 16px 16px 8px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .settings-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .settings-item:last-child { border-bottom: none; }
+        .settings-item label {
+            display: block; font-size: 14px; font-weight: 500;
+            margin-bottom: 6px; color: #333;
+        }
+        .settings-item .hint {
+            font-size: 11px; color: #999; margin-top: 4px; line-height: 1.4;
+        }
+        .s-input {
+            width: 100%; border: 1px solid #e5e5e5; border-radius: 8px;
+            padding: 10px 12px; font-size: 14px; outline: none;
+            transition: border-color 0.2s; background: #fafafa;
+        }
+        .s-input:focus { border-color: #07C160; background: #fff; }
+        textarea.s-input { resize: vertical; min-height: 80px; }
+        select.s-input { appearance: auto; }
+        .s-row { display: flex; gap: 8px; }
+
+        /* 用户头像 */
+        .avatar-area { display: flex; flex-direction: column; align-items: center; padding: 16px; }
+        .avatar-img {
+            width: 72px; height: 72px; border-radius: 50%;
+            object-fit: cover; border: 2px solid #07C160;
+            cursor: pointer; background: #ddd;
+        }
+        .avatar-placeholder {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: #ccc; display: flex; align-items: center;
+            justify-content: center; color: #fff; font-size: 28px;
+            cursor: pointer;
+        }
+        .avatar-btns { display: flex; gap: 8px; margin-top: 10px; }
+        .avatar-btn {
+            padding: 6px 14px; border-radius: 8px; border: 1px solid #e5e5e5;
+            background: #f5f5f5; color: #333; font-size: 12px; cursor: pointer;
+        }
+        .avatar-btn:hover { background: #eee; }
+        .avatar-url-box { margin-top: 10px; width: 100%; max-width: 280px; display: none; }
+
+        /* 保存按钮 */
+        .save-btn {
+            width: 100%; padding: 14px; border-radius: 12px; border: none;
+            background: #07C160; color: #fff; font-size: 16px; font-weight: 600;
+            cursor: pointer; margin-bottom: 16px; transition: background 0.2s;
+        }
+        .save-btn:hover { background: #06a050; }
+        .save-btn:active { transform: scale(0.98); }
+
+        /* 备份按钮组 */
+        .action-row { display: flex; gap: 8px; }
+        .action-btn {
+            flex: 1; padding: 12px; border-radius: 10px; border: none;
+            font-size: 13px; font-weight: 500; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            transition: all 0.15s;
+        }
+        .action-btn:active { transform: scale(0.97); }
+        .action-green { background: rgba(7,193,96,0.1); color: #07C160; }
+        .action-green:hover { background: rgba(7,193,96,0.18); }
+        .action-red { background: rgba(244,53,48,0.1); color: #F43530; }
+        .action-red:hover { background: rgba(244,53,48,0.18); }
+
+        .toast {
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(10px);
+            background: rgba(0,0,0,0.75); color: #fff; padding: 10px 24px;
+            border-radius: 20px; font-size: 14px; opacity: 0;
+            transition: all 0.3s; pointer-events: none; z-index: 100;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* radio组 */
+        .radio-group { display: flex; gap: 16px; padding: 4px 0; }
+        .radio-group label { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }</style>
+</head>
+<body>
+<div class="settings-header">
+    <button class="settings-back" onclick="window.location.href='index.html'"><i class="fa fa-arrow-left"></i></button>
+    <span class="settings-title"><i class="fa fa-cog"></i> 设置</span>
+</div>
+
+<div class="settings-body"><!-- 用户信息 -->
+    <div class="settings-section-title">用户信息</div>
+    <div class="settings-section">
+        <div class="avatar-area">
+            <img id="userAvatarPreview" class="avatar-img" alt="头像" style="display:none;">
+            <div id="userAvatarPlaceholder" class="avatar-placeholder"><i class="fa fa-user"></i></div>
+            <div class="avatar-btns">
+                <label class="avatar-btn"><i class="fa fa-upload"></i> 上传<input type="file" id="userAvatarUpload" accept="image/*" style="display:none;"></label>
+                <button class="avatar-btn" id="userAvatarUrlToggle"><i class="fa fa-link"></i> URL</button>
+            </div><div class="avatar-url-box" id="userAvatarUrlBox">
+                <div class="s-row">
+                    <input type="url" class="s-input" id="userAvatarUrl" placeholder="输入头像图片URL" style="font-size:12px;">
+                    <button class="avatar-btn" onclick="confirmUserAvatarUrl()">确认</button>
+                </div>
+            </div>
+        </div>
+        <div class="settings-item">
+            <label>你的名称</label>
+            <input type="text" class="s-input" id="userName" placeholder="user" value="user">
+            <div class="hint">发送给API时使用的名称</div>
+        </div>
+    </div>
+
+    <!-- API与模型 -->
+    <div class="settings-section-title">API 与模型配置</div>
+    <div class="settings-section">
+        <div class="settings-item">
+            <label>API Base URL</label>
+            <input type="url" class="s-input" id="baseUrl" placeholder="https://api.openai.com/v1"></div>
+        <div class="settings-item">
+            <label>API Key</label>
+            <input type="password" class="s-input" id="apiKey" placeholder="sk-...">
+        </div>
+        <div class="settings-item">
+            <label>模型名称</label>
+            <div class="s-row">
+                <select class="s-input" id="modelName" style="flex:1;"></select>
+                <button class="avatar-btn" id="refreshModelsBtn" style="white-space:nowrap;"><i class="fa fa-refresh"></i> 刷新</button>
+            </div><div class="hint">填写API地址和Key后，点刷新获取模型列表</div>
+        </div>
+        <div class="settings-item">
+            <label>模型温度 (Temperature)</label>
+            <input type="number" class="s-input" id="apiTemperature" value="0.7" min="0" max="2" step="0.1">
+            <div class="hint">值越高越有创意，越低越稳定。默认0.7</div>
+        </div>
+        <div class="settings-item">
+            <label>单次上下文轮次</label>
+            <input type="number" class="s-input" id="historyTurns" value="10" min="0">
+            <div class="hint">每次API请求读取最近N轮对话。0=不限制</div>
+        </div>
+        <div class="settings-item">
+            <label>日记生成频率 (轮)</label>
+            <input type="number" class="s-input" id="diaryGenerationTurns" value="30" min="0">
+            <div class="hint">每隔N轮自动生成日记。0=禁用</div>
+        </div>
+        <div class="settings-item">
+            <label>全局系统提示词</label>
+            <textarea class="s-input" id="globalSystemPrompt" rows="5" placeholder="定义全局规则，对所有聊天对象生效..."></textarea>
+            <div class="hint">最高优先级，与每个角色的人设合并后发送</div>
+        </div>
+    </div>
+
+    <!-- 图片生成 -->
+    <div class="settings-section-title"><i class="fa fa-picture-o"></i> 图片生成（可选）</div>
+    <div class="settings-section">
+        <div class="settings-item">
+            <div class="hint" style="margin-bottom:8px;">为朋友圈动态生成配图。留空则不用AI生图。</div>
+        </div>
+        <div class="settings-item">
+            <label>生图API地址</label>
+            <input type="text" class="s-input" id="imageGenBaseUrl" placeholder="留空使用主API地址">
+        </div>
+        <div class="settings-item">
+            <label>生图API Key</label>
+            <input type="password" class="s-input" id="imageGenApiKey" placeholder="留空使用主API Key">
+        </div>
+        <div class="settings-item">
+            <label>生图模型名</label>
+            <input type="text" class="s-input" id="imageGenModelName" placeholder="例如：gemini-2.0-flash-exp">
+        </div>
+        <div class="settings-item">
+            <label>接口类型</label>
+            <div class="radio-group">
+                <label><input type="radio" name="imageGenInterface" value="chat" checked> /chat/completions</label>
+                <label><input type="radio" name="imageGenInterface" value="images"> /images/generations</label></div>
+            <div class="hint">Gemini/GPT-4o选chat，DALL-E选images</div>
+        </div>
+    </div>
+
+    <!-- 辅助API -->
+    <div class="settings-section-title"><i class="fa fa-cogs"></i> 辅助API（可选）</div>
+    <div class="settings-section">
+        <div class="settings-item">
+            <div class="hint" style="margin-bottom:8px;">处理评论、搜索关系等轻量任务。留空使用主模型。</div>
+        </div>
+        <div class="settings-item">
+            <label>辅助API地址</label>
+            <input type="text" class="s-input" id="auxBaseUrl" placeholder="留空使用主API地址">
+        </div>
+        <div class="settings-item">
+            <label>辅助API Key</label>
+            <input type="password" class="s-input" id="auxApiKey" placeholder="留空使用主API Key">
+        </div>
+        <div class="settings-item">
+            <label>辅助模型名</label>
+            <input type="text" class="s-input" id="auxModelName" placeholder="例如：gpt-4o-mini">
+        </div></div>
+
+    <!-- 保存 -->
+    <button class="save-btn" onclick="saveAll()"><i class="fa fa-save"></i> 保存所有设置</button>
+
+    <!-- 数据备份 -->
+    <div class="settings-section-title">数据备份与恢复</div>
+    <div class="settings-section">
+        <div class="settings-item">
+            <div class="action-row">
+                <button class="action-btn action-green" id="backupBtn"><i class="fa fa-download"></i> 备份全部数据</button>
+                <button class="action-btn action-green" onclick="document.getElementById('restoreFileInput').click()"><i class="fa fa-upload"></i> 从文件恢复</button>
+                <input type="file" id="restoreFileInput" accept=".zip" style="display:none;">
+            </div>
+        </div>
+    </div>
+
+    <!-- 诊断 -->
+    <div class="settings-section-title">诊断与调试</div>
+    <div class="settings-section">
+        <div class="settings-item">
+            <div class="action-row">
+                <button class="action-btn action-green" id="viewLogsBtn"><i class="fa fa-file-text-o"></i> 查看日志</button>
+                <button class="action-btn action-red" id="clearLogsBtn"><i class="fa fa-eraser"></i> 清空日志</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== 读写设置共用同一套localStorage Key ====================
+// 这些Key名称必须和wechat里app.js 用的完全一致
+
+const SETTINGS_KEY = 'wechat_ai_settings'; // 和app.js里的key一致
+
+function toast(t) {
+    const el = document.getElementById('toast');
+    el.textContent = t; el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// 加载设置到表单
+function loadSettings() {
+    try {
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        if (!raw) return;
+        const s = JSON.parse(raw);
+        setVal('baseUrl', s.baseUrl);
+        setVal('apiKey', s.apiKey);
+        setVal('apiTemperature', s.temperature);
+        setVal('historyTurns', s.historyTurns);
+        setVal('diaryGenerationTurns', s.diaryGenerationTurns);
+        setVal('globalSystemPrompt', s.globalSystemPrompt);
+        setVal('userName', s.userName);
+        setVal('imageGenBaseUrl', s.imageGenBaseUrl);
+        setVal('imageGenApiKey', s.imageGenApiKey);
+        setVal('imageGenModelName', s.imageGenModelName);
+        setVal('auxBaseUrl', s.auxBaseUrl);
+        setVal('auxApiKey', s.auxApiKey);
+        setVal('auxModelName', s.auxModelName);
+
+        // 模型名
+        if (s.modelName) {
+            const sel = document.getElementById('modelName');
+            const opt = document.createElement('option');
+            opt.value = s.modelName; opt.textContent = s.modelName; opt.selected = true;
+            sel.appendChild(opt);
+        }
+
+        // 接口类型
+        if (s.imageGenInterface) {
+            const radio = document.querySelector(`input[name="imageGenInterface"][value="${s.imageGenInterface}"]`);
+            if (radio) radio.checked = true;
+        }
+
+        // 用户头像
+        if (s.userAvatar) {
+            const img = document.getElementById('userAvatarPreview');
+            const ph = document.getElementById('userAvatarPlaceholder');
+            img.src = s.userAvatar; img.style.display = 'block'; ph.style.display = 'none';
+        }} catch (e) { console.log('加载设置失败', e); }
+}
+
+function setVal(id, val) {
+    const el = document.getElementById(id);
+    if (el && val !== undefined && val !== null) el.value = val;
+}
+function getVal(id) {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+}
+
+// 保存设置
+function saveAll() {
+    let existing = {};
+    try { existing = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch(e){}
+
+    const iface = document.querySelector('input[name="imageGenInterface"]:checked');
+
+    const settings = {
+        ...existing,
+        baseUrl: getVal('baseUrl'),
+        apiKey: getVal('apiKey'),
+        modelName: getVal('modelName'),
+        temperature: parseFloat(getVal('apiTemperature')) || 0.7,
+        historyTurns: parseInt(getVal('historyTurns')) || 10,
+        diaryGenerationTurns: parseInt(getVal('diaryGenerationTurns')) || 30,
+        globalSystemPrompt: getVal('globalSystemPrompt'),
+        userName: getVal('userName') || 'user',
+        imageGenBaseUrl: getVal('imageGenBaseUrl'),
+        imageGenApiKey: getVal('imageGenApiKey'),
+        imageGenModelName: getVal('imageGenModelName'),
+        imageGenInterface: iface ? iface.value : 'chat',
+        auxBaseUrl: getVal('auxBaseUrl'),
+        auxApiKey: getVal('auxApiKey'),
+        auxModelName: getVal('auxModelName'),
+    };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    toast('设置已保存✓');
+}
+
+// 刷新模型列表
+document.getElementById('refreshModelsBtn').addEventListener('click', async () => {
+    const base = getVal('baseUrl');
+    const key = getVal('apiKey');
+    if (!base || !key) { toast('请先填写API地址和Key'); return; }
+    const sel = document.getElementById('modelName');
+    const cur = sel.value;
+    sel.innerHTML = '<option>加载中...</option>';
+    try {
+        const url = base.replace(/\/+$/, '') + '/models';
+        const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + key } });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const d = await r.json();
+        const models = (d.data || []).map(m => m.id).sort();
+        sel.innerHTML = '';
+        models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m; opt.textContent = m;
+            if (m === cur) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        toast('获取到' + models.length + ' 个模型');
+    } catch (e) {
+        sel.innerHTML = '<option>' + (cur || '获取失败') + '</option>';
+        toast('获取模型失败: ' + e.message);
+    }
+});
+
+// 用户头像上传
+document.getElementById('userAvatarUpload').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    compressImg(file, 200, 0.8, (b64) => {
+        const img = document.getElementById('userAvatarPreview');
+        const ph = document.getElementById('userAvatarPlaceholder');
+        img.src = b64; img.style.display = 'block'; ph.style.display = 'none';
+        let s = {}; try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'); } catch(e){}
+        s.userAvatar = b64;
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+        toast('头像已更新');
+    });
+    this.value = '';
+});
+
+document.getElementById('userAvatarUrlToggle').addEventListener('click', () => {
+    const box = document.getElementById('userAvatarUrlBox');
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+});
+
+function confirmUserAvatarUrl() {
+    const url = getVal('userAvatarUrl');
+    if (!url) return;
+    const img = document.getElementById('userAvatarPreview');
+    const ph = document.getElementById('userAvatarPlaceholder');
+    img.onload = () => {
+        img.style.display = 'block'; ph.style.display = 'none';
+        let s = {}; try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'); } catch(e){}
+        s.userAvatar = url;
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+        toast('头像已更新');
+    };img.onerror = () => { toast('图片加载失败'); };
+    img.src = url;
+}
+
+function compressImg(file, maxSize, quality, cb) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            let w = img.width, h = img.height;
+            if (w > maxSize || h > maxSize) {
+                if (w > h) { h = Math.round(h*maxSize/w); w = maxSize; }
+                else { w = Math.round(w*maxSize/h); h = maxSize; }
+            }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            cb(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// 备份/恢复/日志 — 这些需要引入原有JS才能工作，这里先做跳转提示
+document.getElementById('backupBtn').addEventListener('click', () => {
+    toast('请在微信页面内使用备份功能');
+});
+document.getElementById('viewLogsBtn').addEventListener('click', () => {
+    toast('请在微信页面内查看日志');
+});
+document.getElementById('clearLogsBtn').addEventListener('click', () => {
+    if (confirm('确认清空日志？')) {
+        localStorage.removeItem('wechat_ai_logs');
+        toast('日志已清空');
+    }
+});
+
+loadSettings();
+</script>
+</body>
+</html>

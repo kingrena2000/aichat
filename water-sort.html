@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>倒水排序</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(160deg, #070b34 0%, #0d1357 40%, #1a0a3e 70%, #0a0e2a 100%);
+            color: #fff; height: 100vh; overflow: hidden;
+            user-select: none; -webkit-user-select: none;
+        }
+        body::before {
+            content: ''; position: fixed; inset: 0; pointer-events: none;
+            background:
+                radial-gradient(ellipse at 25% 15%, rgba(80,120,240,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 75% 85%, rgba(140,60,220,0.05) 0%, transparent 50%);
+        }
+        .game-container {
+            display: flex; flex-direction: column; height: 100vh;
+            max-width: 540px; margin: 0 auto; position: relative; z-index: 1;
+        }
+
+        /* ===== 顶部 ===== */
+        .game-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 20px; flex-shrink: 0;
+        }
+        .game-header-left { display: flex; align-items: center; gap: 12px; }
+        .game-back-btn {
+            width: 36px; height: 36px; border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05);
+            color: #fff; font-size: 14px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .game-back-btn:hover { background: rgba(255,255,255,0.15); }
+        .game-title {
+            font-size: 18px; font-weight: 700;
+            background: linear-gradient(135deg, #c8d4ff, #8fa4ff);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .game-level-badge {
+            background: linear-gradient(135deg, #5b6eea, #7b4bb2);
+            padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
+            border: none; color: #fff; cursor: pointer;
+            box-shadow: 0 3px 14px rgba(91,110,234,0.35);
+        }
+        .game-level-badge:hover { transform: translateY(-1px); box-shadow: 0 5px 20px rgba(91,110,234,0.5); }
+
+        /* ===== 信息栏 ===== */
+        .game-stats {
+            display: flex; justify-content: center; gap: 28px;
+            padding: 4px 20px 4px; flex-shrink: 0;
+        }
+        .game-stat-item { text-align: center; }
+        .game-stat-value {
+            font-size: 22px; font-weight: 700;
+            background: linear-gradient(135deg, #7b8cff, #b48cff);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .game-stat-label {
+            font-size: 10px; color: rgba(255,255,255,0.35);
+            margin-top: 2px; letter-spacing: 1px;
+        }
+
+        /* ===== 加载 ===== */
+        .loading-overlay {
+            position: fixed; inset: 0; background: rgba(7,11,52,0.95); z-index: 300;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+            transition: opacity 0.4s;
+        }
+        .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+        .loading-spinner {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(255,255,255,0.1); border-top-color: #7b8cff;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-size: 14px; color: rgba(255,255,255,0.6); }
+
+        /* ===== 瓶子区域 ===== */
+        .bottles-area {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            padding: 6px 10px; overflow: hidden;
+        }
+        .bottles-container {
+            display: flex; flex-wrap: wrap; justify-content: center;
+            align-items: flex-end; gap: 14px 10px; max-width: 100%;
+        }
+
+        /* ===== 瓶子交互 ===== */
+        .bottle-wrapper {
+            display: flex; flex-direction: column; align-items: center;
+            cursor: pointer; position: relative;
+            transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), filter 0.2s;
+        }
+        .bottle-wrapper:active { transform: scale(0.95) !important; }
+        .bottle-wrapper.selected { transform: translateY(-18px); filter: brightness(1.15); }
+        .bottle-wrapper.hint-source { animation: hintPulse 0.8s ease-in-out infinite; }
+        .bottle-wrapper.completed .bottle-outer { filter: drop-shadow(0 0 8px rgba(0,220,100,0.3)); }
+        .bottle-wrapper.completed::after {
+            content: '✅'; position: absolute; top: -2px; right: -8px; font-size: 12px;
+            animation: sparkle 2s ease-in-out infinite;
+        }
+        @keyframes hintPulse {
+            0%, 100% { transform: translateY(0); filter: brightness(1); }
+            50% { transform: translateY(-12px); filter: brightness(1.25); }
+        }
+        @keyframes sparkle {
+            0%, 100% { opacity: 0.6; transform: scale(0.85); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        @keyframes bottleComplete {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.08); }
+            60% { transform: scale(0.96); }
+            100% { transform: scale(1); }
+        }
+        .bottle-wrapper.just-completed { animation: bottleComplete 0.5s ease; }
+
+        /* ===== 广口瓶 ===== */
+        .bottle-outer { position: relative; width: 56px; height: 152px; }
+        .bottle-svg {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            z-index: 5; pointer-events: none;
+        }
+        .bottle-liquid-area {
+            position: absolute; left: 9px; right: 9px;
+            top: 24px; bottom: 5px;
+            display: flex; flex-direction: column-reverse;
+            overflow: hidden; border-radius: 0 0 16px 16px; z-index: 2;
+        }
+        .liquid-layer {
+            width: 100%; flex: 0 0 25%; position: relative;
+            transition: all 0.3s ease;
+        }
+        .liquid-layer:last-child::before {
+            content: ''; position: absolute; top: -2px; left: 3px; right: 3px;
+            height: 5px; border-radius: 50%; background: rgba(255,255,255,0.25); z-index: 6;
+        }
+        .liquid-layer::after {
+            content: ''; position: absolute; top: 0; left: 0;
+            width: 30%; height: 100%;
+            background: linear-gradient(90deg, rgba(255,255,255,0.18) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        /* ===== 8种高对比色 ===== */
+        .liquid-0 { background: linear-gradient(180deg, #ff4d4d 0%, #e51738 50%, #b71020 100%); }
+        .liquid-1 { background: linear-gradient(180deg, #4d8eff 0%, #1a5eff 50%, #0040dd 100%); }
+        .liquid-2 { background: linear-gradient(180deg, #ffe84d 0%, #ffd600 50%, #ccaa00 100%); }
+        .liquid-3 { background: linear-gradient(180deg, #4cdc8c 0%, #00b860 50%, #008a44 100%); }
+        .liquid-4 { background: linear-gradient(180deg, #c44dff 0%, #9500ff 50%, #6e00c0 100%); }
+        .liquid-5 { background: linear-gradient(180deg, #ffa040 0%, #ff6d00 50%, #cc5200 100%); }
+        .liquid-6 { background: linear-gradient(180deg, #ff4da6 0%, #ff0080 50%, #cc0066 100%); }
+        .liquid-7 { background: linear-gradient(180deg, #4df5ff 0%, #00d4e6 50%, #00a0b0 100%); }
+
+        /* ===== 底部按钮 ===== */
+        .game-actions {
+            display: flex; justify-content: center; gap: 12px;
+            padding: 10px 20px 28px; flex-shrink: 0;
+        }
+        .game-action-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 3px;
+            padding: 10px 16px; border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.6); font-size: 11px;
+            cursor: pointer; min-width: 60px; transition: all 0.2s;
+        }
+        .game-action-btn:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.9); }
+        .game-action-btn:active { transform: scale(0.93); }
+        .game-action-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+        .game-action-btn .btn-icon { font-size: 20px; }
+
+        /* ===== 关卡选择 ===== */
+        .level-select-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px); z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .level-select-overlay.show { opacity: 1; pointer-events: auto; }
+        .level-select-panel {
+            background: linear-gradient(145deg, #1e1e3a, #16162e);
+            border: 1px solid rgba(255,255,255,0.08); border-radius: 24px;
+            padding: 24px; width: 92%; max-width: 440px;
+            max-height: 75vh; overflow-y: auto;
+        }
+        .level-select-title { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 16px; }
+        .level-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+        .level-btn {
+            aspect-ratio: 1; border-radius: 12px;
+            border: 2px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04);
+            color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: all 0.2s; position: relative; line-height: 1.2;
+        }
+        .level-btn:hover { background: rgba(255,255,255,0.12); }
+        .level-btn .level-info { font-size: 7px; opacity: 0.4; margin-top: 1px; white-space: nowrap; }
+        .level-btn.completed { border-color: #07C160; background: rgba(7,193,96,0.12); }
+        .level-btn.completed::after { content: '✓'; position: absolute; top: 1px; right: 3px; font-size: 9px; color: #07C160; }
+        .level-btn.current { border-color: #667eea; background: rgba(102,126,234,0.2); box-shadow: 0 0 12px rgba(102,126,234,0.4); }
+        .level-btn.locked { opacity: 0.25; cursor: not-allowed; }
+        .level-close-btn {
+            display: block; margin: 16px auto 0; padding: 10px 40px; border-radius: 25px;
+            border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06);
+            color: #fff; font-size: 14px; cursor: pointer;
+        }
+        .level-close-btn:hover { background: rgba(255,255,255,0.12); }
+
+        /* ===== 通关弹窗 ===== */
+        .win-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(12px); z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.5s;
+        }
+        .win-overlay.show { opacity: 1; pointer-events: auto; }
+        .win-card { text-align: center; animation: winBounce 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+        @keyframes winBounce {
+            0% { transform: scale(0.3); opacity: 0; }
+            60% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .win-emoji { font-size: 80px; margin-bottom: 16px; animation: winEmoji 1s ease infinite alternate; }
+        @keyframes winEmoji { from { transform: scale(1) rotate(-3deg); } to { transform: scale(1.1) rotate(3deg); } }
+        .win-title {
+            font-size: 32px; font-weight: 800; margin-bottom: 8px;
+            background: linear-gradient(135deg, #ffd43b, #ff922b, #ff6b6b);
+            background-size: 200% 200%; animation: winGrad 2s ease infinite;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        @keyframes winGrad { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        .win-stars { font-size: 36px; margin-bottom: 20px; letter-spacing: 8px; }
+        .win-subtitle { font-size: 15px; color: rgba(255,255,255,0.5); margin-bottom: 28px; }
+        .win-actions { display: flex; gap: 14px; justify-content: center; }
+        .win-btn {
+            padding: 14px 36px; border-radius: 28px; border: none;
+            font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .win-btn:active { transform: scale(0.95); }
+        .win-btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff; box-shadow: 0 4px 20px rgba(102,126,234,0.4);
+        }
+        .win-btn-primary:hover { box-shadow: 0 6px 28px rgba(102,126,234,0.6); transform: translateY(-2px); }
+        .win-btn-secondary { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+        .win-btn-secondary:hover { background: rgba(255,255,255,0.15); }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 360px) {
+            .bottle-outer { width: 46px; height: 126px; }
+            .bottle-liquid-area { left: 7px; right: 7px; top: 20px; bottom: 4px; border-radius: 0 0 13px 13px; }
+            .bottles-container { gap: 10px 6px; }
+        }
+        @media (min-width: 500px) {
+            .bottle-outer { width: 60px; height: 162px; }
+            .bottle-liquid-area { left: 10px; right: 10px; top: 26px; bottom: 6px; border-radius: 0 0 18px 18px; }
+        }
+        .bottles-container.size-m .bottle-outer { width: 48px; height: 130px; }
+        .bottles-container.size-m .bottle-liquid-area { left: 8px; right: 8px; top: 21px; bottom: 4px; border-radius: 0 0 14px 14px; }
+        .bottles-container.size-s .bottle-outer { width: 40px; height: 110px; }
+        .bottles-container.size-s .bottle-liquid-area { left: 7px; right: 7px; top: 18px; bottom: 3px; border-radius: 0 0 11px 11px; }
+    </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在生成关卡...</div>
+</div>
+
+<div class="game-container">
+    <div class="game-header">
+        <div class="game-header-left">
+            <button class="game-back-btn" id="gameBackBtn">◀</button>
+            <span class="game-title">🧪 倒水排序</span>
+        </div>
+        <button class="game-level-badge" id="levelBadge">第 1 关</button>
+    </div>
+    <div class="game-stats">
+        <div class="game-stat-item">
+            <div class="game-stat-value" id="moveCount">0</div>
+            <div class="game-stat-label">步 数</div>
+        </div>
+        <div class="game-stat-item">
+            <div class="game-stat-value" id="colorInfo">0</div>
+            <div class="game-stat-label">颜 色</div>
+        </div>
+        <div class="game-stat-item">
+            <div class="game-stat-value" id="bottleInfo">0</div>
+            <div class="game-stat-label">瓶 数</div>
+        </div>
+    </div>
+    <div class="bottles-area">
+        <div class="bottles-container" id="bottlesContainer"></div>
+    </div>
+    <div class="game-actions">
+        <button class="game-action-btn" id="undoBtn" disabled>
+            <span class="btn-icon">↩️</span><span>撤销</span>
+        </button>
+        <button class="game-action-btn" id="restartBtn">
+            <span class="btn-icon">🔄</span><span>重玩</span>
+        </button>
+        <button class="game-action-btn" id="hintBtn">
+            <span class="btn-icon">💡</span><span>提示</span>
+        </button>
+        <button class="game-action-btn" id="levelSelectBtn">
+            <span class="btn-icon">📋</span><span>关卡</span>
+        </button>
+    </div>
+</div>
+
+<svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+        <linearGradient id="gG" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="rgba(100,155,255,0.30)"/>
+            <stop offset="18%" stop-color="rgba(120,170,255,0.10)"/>
+            <stop offset="50%" stop-color="rgba(80,130,240,0.05)"/>
+            <stop offset="82%" stop-color="rgba(110,160,255,0.10)"/>
+            <stop offset="100%" stop-color="rgba(90,140,255,0.25)"/>
+        </linearGradient>
+        <linearGradient id="gI" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="rgba(30,50,120,0.10)"/>
+            <stop offset="50%" stop-color="rgba(20,40,100,0.04)"/>
+            <stop offset="100%" stop-color="rgba(30,50,120,0.08)"/>
+        </linearGradient>
+        <linearGradient id="gR" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="rgba(180,210,255,0.50)"/>
+            <stop offset="100%" stop-color="rgba(100,150,240,0.15)"/>
+        </linearGradient>
+        <radialGradient id="gB" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0%" stop-color="rgba(140,190,255,0.12)"/>
+            <stop offset="100%" stop-color="rgba(140,190,255,0)"/>
+        </radialGradient>
+    </defs>
+</svg>
+
+<div class="level-select-overlay" id="levelSelectOverlay">
+    <div class="level-select-panel">
+        <div class="level-select-title">🧪 选择关卡</div>
+        <div class="level-grid" id="levelGrid"></div>
+        <button class="level-close-btn" id="levelCloseBtn">关闭</button>
+    </div>
+</div>
+
+<div class="win-overlay" id="winOverlay">
+    <div class="win-card">
+        <div class="win-emoji">🎉</div>
+        <div class="win-title">恭喜通关！</div>
+        <div class="win-stars" id="winStars">⭐⭐⭐</div>
+        <div class="win-subtitle" id="winSubtitle"></div>
+        <div class="win-actions">
+            <button class="win-btn win-btn-secondary" id="winReplayBtn">再玩一次</button>
+            <button class="win-btn win-btn-primary" id="winNextBtn">下一关 ▶</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/water-sort.js"></script>
+</body>
+</html>

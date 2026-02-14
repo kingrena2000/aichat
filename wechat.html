@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>微信风格多AI聊天 (v5.3)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css"></noscript>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              wechat: { green: '#07C160', lightGreen: '#E6F4EA', gray: '#F5F5F5', darkGray: '#E5E5E5', text: '#333333', lightText: '#888888', red: '#F43530' },
+              chat: { user: '#DDF4E8', ai: '#FFFFFF' },
+              diary: { bg: '#FDFCF7', border: '#F0EAD6', text: '#6B4F4F' }
+            },
+            fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'] },},
+        }
+      }
+    </script>
+    <style type="text/tailwindcss">
+      @layer utilities {
+        .chat-bubble-user { @apply bg-chat-user rounded-2xl rounded-tr-none px-4 py-2 max-w-[80%] shadow-sm; }
+        .chat-bubble-ai { @apply bg-chat-ai rounded-2xl rounded-tl-none px-4 py-2 max-w-[80%] shadow-sm border border-wechat-darkGray; }
+        .nav-item-active { @apply text-wechat-green; }
+        .input-focus { @apply ring-2 ring-wechat-green/30 outline-none; }
+        .avatar-preview { @apply w-16 h-16 rounded-full object-cover border-2 border-wechat-green/50 cursor-pointer transition-all hover:border-wechat-green; }
+        .avatar-upload-btn { @apply w-full bg-wechat-gray hover:bg-wechat-darkGray text-wechat-text py-2 rounded-lg text-sm transition-colors; }
+        .slide-delete-btn { @apply w-20 h-full bg-wechat-red text-white flex items-center justify-center transition-transform duration-300 transform translate-x-full; }
+        .chat-item-wrapper { @apply flex items-center justify-between bg-white transition-transform duration-300; }
+        .chat-item-wrapper.swipe-left { @apply transform -translate-x-20; }
+        .chat-detail-header { @apply bg-[#ECE5DD] py-6 flex flex-col items-center; }
+        .chat-item-actions { @apply absolute right-4 top-1/2 transform -translate-y-1/2 flex gap-2 opacity-0 transition-opacity duration-300; }
+        .chat-item-container:hover .chat-item-actions { @apply opacity-100; }
+        .delete-action-btn { @apply bg-wechat-red/10 text-wechat-red p-1.5 rounded-full hover:bg-wechat-red/20 transition-colors; }
+        .edit-action-btn { @apply bg-wechat-green/10 text-wechat-green p-1.5 rounded-full hover:bg-wechat-green/20 transition-colors; }
+        .user-avatar-small { @apply w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-white flex-shrink-0; }
+        .message-context-menu { @apply absolute bg-white shadow-lg rounded-md p-2 z-50 text-sm; }
+        .diary-entry-card { @apply bg-diary-bg border border-diary-border rounded-lg p-4 mb-4 shadow-sm break-words; }
+      }
+    </style>
+    <style>
+      /*打字指示器动画 */
+      .typing-dot-anim { display: inline-block; }
+      .typing-dot-anim span {
+        display: inline-block;
+        width: 6px; height: 6px;
+        margin: 0 1px;
+        background: #999;
+        border-radius: 50%;
+        animation: typingBounce 1.4s infinite ease-in-out both;
+      }
+      .typing-dot-anim span:nth-child(1) { animation-delay: 0s; }
+      .typing-dot-anim span:nth-child(2) { animation-delay: 0.2s; }
+      .typing-dot-anim span:nth-child(3) { animation-delay: 0.4s; }
+      @keyframes typingBounce {
+        0%, 80%, 100% { transform: scale(0.4); opacity: 0.4; }
+        40% { transform: scale(1); opacity: 1; }
+      }
+    </style>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-wechat-gray font-sans text-wechat-text">
+<div class="h-screen overflow-hidden">
+
+    <!-- ========== 聊天列表页========== -->
+    <div id="chatListPage" class="h-full flex flex-col">
+<header class="bg-white border-b border-wechat-darkGray py-3 px-4 flex items-center justify-between shadow-sm z-10">
+            <div class="flex items-center">
+                <button onclick="window.location.href='index.html'" class="text-wechat-text p-2 mr-2"><i class="fa fa-arrow-left"></i></button>
+                <h1 class="text-lg">AI聊天</h1>
+            </div>
+            <button id="addChatBtn" class="text-wechat-text p-2 rounded-full hover:bg-wechat-gray transition-colors"><i class="fa fa-plus"></i></button>
+        </header>
+        <div id="chatListContainer" class="flex-1 chat-list-container bg-white">
+            <div id="emptyChatList" class="flex flex-col items-center justify-center h-full text-wechat-lightText py-10">
+                <i class="fa fa-comments-o text-4xl mb-3 opacity-50"></i>
+                <p class="text-sm">暂无聊天对象，点击右上角"+"添加</p>
+            </div>
+        </div>
+        <nav class="bg-white border-t border-wechat-darkGray flex nav-safe-area">
+            <button id="chatNavBtn" class="flex-1 py-3 flex flex-col items-center justify-center nav-item-active"><i class="fa fa-comments text-lg"></i><span class="text-xs mt-1">聊天</span></button>
+            <button id="momentsNavBtn" class="flex-1 py-3 flex flex-col items-center justify-center text-wechat-lightText relative"><i class="fa fa-camera-retro text-lg"></i><span class="text-xs mt-1">朋友圈</span><span id="momentsBadge" class="moments-badge" style="display:none;"></span></button>
+            <button id="diaryNavBtn" class="flex-1 py-3 flex flex-col items-center justify-center text-wechat-lightText"><i class="fa fa-book text-lg"></i><span class="text-xs mt-1">日记</span></button>
+            <button id="settingsNavBtn" class="flex-1 py-3 flex flex-col items-center justify-center text-wechat-lightText"><i class="fa fa-cog text-lg"></i><span class="text-xs mt-1">设置</span></button>
+        </nav>
+    </div>
+
+    <!-- ========== 聊天页 ========== -->
+    <div id="chatPage" class="chat-page hidden">
+<header class="bg-white border-b border-wechat-darkGray py-2 px-4 flex items-center justify-between shadow-sm z-10">
+            <div class="flex items-center">
+                <button id="backToChatListBtn" class="text-wechat-text p-2 mr-2"><i class="fa fa-arrow-left"></i></button>
+                <div class="flex items-center">
+                    <div id="chatPageAvatar" class="w-8 h-8 rounded-full overflow-hidden mr-2"></div>
+                    <h1 id="chatPageTitle" class="text-lg font-semibold">聊天对象</h1>
+                </div>
+            </div>
+            <button id="chatPageMoreBtn" class="text-wechat-text p-2 rounded-full hover:bg-wechat-gray transition-colors"><i class="fa fa-ellipsis-h"></i></button>
+        </header>
+        <main class="chat-main">
+            <!--★ typing indicator 已删除，改为JS动态注入到chatPageContainer内部 -->
+            <div id="chatPageContainer" class="chat-content p-4 bg-[#ECE5DD]"></div>
+            <div class="chat-input-container bg-white border-t border-wechat-darkGray p-3 safe-area-bottom">
+                <div class="flex items-center gap-2" style="position: relative;">
+                    <div class="sticker-panel" id="stickerPanel">
+                        <div class="sticker-tabs">
+                            <button class="sticker-tab active" id="emojiTabBtn">😀Emoji</button>
+                            <button class="sticker-tab" id="customStickerTabBtn">🖼️ 表情图</button>
+                        </div>
+                        <div class="sticker-content">
+                            <div class="sticker-section active" id="emojiSection">
+                                <div class="emoji-grid" id="emojiGrid"></div>
+                            </div>
+                            <div class="sticker-section" id="customStickerSection">
+                                <div class="sticker-grid" id="stickerGrid"></div>
+                <div class="sticker-empty-state" id="stickerEmptyHint" style="display:none;">
+                                    <i class="fa fa-picture-o"></i>
+                                    <p>还没有表情图<br>点击下方按钮添加</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sticker-manage-bar">
+                            <button class="sticker-manage-btn" id="addStickerUploadBtn"><i class="fa fa-upload"></i> 上传</button>
+                            <button class="sticker-manage-btn" id="addStickerUrlBtn"><i class="fa fa-link"></i> URL</button>
+                            <button class="sticker-manage-btn" id="addStickerImportBtn"><i class="fa fa-download"></i> 导入</button>
+                        </div>
+                    </div>
+                    <button class="sticker-tool-btn" id="stickerToggleBtn"><i class="fa fa-smile-o"></i></button>
+                <textarea id="chatPageMessageInput" class="flex-1 border border-wechat-darkGray rounded-full px-4 py-2 text-sm resize-none focus:input-focus transition-all" placeholder="输入消息... 用:名称: 发表情" rows="1"></textarea>
+                    <button id="chatPageSendBtn" class="w-10 h-10 rounded-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ========== 设置页 ========== -->
+    <div id="settingsPage" class="fixed inset-0 bg-white z-20 transform translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto safe-area-bottom">
+        <div class="p-4 border-b border-wechat-darkGray flex items-center justify-between sticky top-0 bg-white z-10">
+            <h2 class="text-lg font-semibold">设置</h2>
+            <button id="closeSettingsBtn" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button>
+        </div>
+        <div class="p-4 space-y-8 pb-20">
+            <!-- 用户信息设置 -->
+            <div class="space-y-6">
+                <h3 class="text-base font-semibold text-wechat-text border-b border-wechat-darkGray pb-2">用户信息设置</h3>
+                <div class="space-y-3">
+                    <label class="block text-sm font-medium text-wechat-text">你的头像</label>
+                    <div class="flex flex-col items-center">
+                        <div class="relative mb-3">
+                            <img id="userAvatarPreview" class="avatar-preview" alt="你的头像预览">
+                            <i id="userAvatarIcon" class="fa fa-user absolute inset-0 flex items-center justify-center text-white text-xl bg-gray-400 rounded-full"></i>
+                        </div>
+                        <div class="flex gap-3 w-full max-w-xs">
+                            <label class="flex-1 text-center">
+                                <input type="file" id="userAvatarUpload" accept="image/*" class="hidden">
+                                <button type="button" class="avatar-upload-btn" onclick="document.getElementById('userAvatarUpload').click()"><i class="fa fa-upload mr-1"></i> 本地上传</button>
+                            </label>
+                            <button type="button" class="flex-1 avatar-upload-btn" id="userAvatarUrlBtn"><i class="fa fa-link mr-1"></i> 输入URL</button>
+                        </div>
+                        <div id="userAvatarUrlContainer" class="w-full max-w-xs mt-3 hidden">
+                            <input type="url" id="userAvatarUrl" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="输入头像图片URL">
+                            <div class="flex gap-2 mt-2">
+                                <button type="button" class="flex-1 bg-wechat-green text-white py-2 rounded-lg text-sm" id="userAvatarUrlConfirm">确认</button>
+                                <button type="button" class="flex-1 bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm" id="userAvatarUrlCancel">取消</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <label class="block text-sm font-medium text-wechat-text">你的名称<span class="text-xs text-wechat-lightText ml-1">(发送给API使用)</span></label>
+                    <input type="text" id="userName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="输入你的名称" value="user">
+                </div>
+            </div>
+            <!-- API与模型配置 -->
+            <div class="space-y-6">
+                <h3 class="text-base font-semibold text-wechat-text border-b border-wechat-darkGray pb-2">API与模型配置</h3>
+                <form id="settingsForm" class="space-y-4">
+                    <div><label class="block text-sm font-medium text-wechat-text mb-1">API Base URL</label><input type="url" id="baseUrl" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1"></div>
+                    <div><label class="block text-sm font-medium text-wechat-text mb-1">API Key</label><input type="password" id="apiKey" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="sk-..."></div>
+                    <div><label class="block text-sm font-medium text-wechat-text mb-1">模型名称</label><div class="flex gap-2"><select id="modelName" class="flex-1 border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus"></select><button type="button" id="refreshModelsBtn" class="bg-wechat-green/10 text-wechat-green px-3 py-2 rounded-lg hover:bg-wechat-green/20 transition-colors"><i class="fa fa-refresh"></i></button></div><p class="text-xs text-wechat-lightText mt-1">填写API地址和Key后，点击刷新按钮获取可用模型列表</p></div>
+                <div><label for="apiTemperature" class="block text-sm font-medium text-wechat-text mb-1">模型温度 (Temperature)</label><input type="number" id="apiTemperature" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如: 0.7" value="0.7" min="0" max="2" step="0.1"><p class="text-xs text-wechat-lightText mt-1">控制回答的随机性。值越高回答越有创意，值越低回答越稳定。默认 0.7。</p></div>
+                    <div><label class="block text-sm font-medium text-wechat-text mb-1">单次上下文轮次 (短期记忆)</label><input type="number" id="historyTurns" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如: 10" value="10" min="0"><p class="text-xs text-wechat-lightText mt-1">每次请求API时，读取最近的N轮对话。0或空表示不限制。</p></div>
+                    <div><label class="block text-sm font-medium text-wechat-text mb-1">日记生成频率 (轮)</label><input type="number" id="diaryGenerationTurns" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如: 30" value="30" min="0"><p class="text-xs text-wechat-lightText mt-1">每隔N轮对话，自动生成一篇日记。0表示禁用。</p></div>
+                    <div><label for="globalSystemPrompt" class="block text-sm font-medium text-wechat-text mb-1">全局系统提示词</label><textarea id="globalSystemPrompt" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm resize-none focus:input-focus h-48" placeholder="定义全局规则，对所有聊天对象生效..."></textarea><p class="text-xs text-wechat-lightText mt-1">此提示词拥有最高优先级，将与每个聊天对象的人设提示词合并后发送给AI。</p></div>
+                </form>
+            </div>
+
+            <!-- 图片生成API配置 -->
+            <div class="space-y-6">
+                <h3 class="text-base font-semibold text-wechat-text border-b border-wechat-darkGray pb-2"><i class="fa fa-picture-o mr-1"></i>图片生成配置（可选）</h3>
+                <p class="text-xs text-wechat-lightText">为朋友圈动态生成配图。留空则不使用AI生图。API地址和Key留空时复用主模型配置。</p>
+                <div class="space-y-4">
+                    <div><label class="block text-sm font-medium text-wechat-text mb-1">生图API地址</label><input type="text" id="imageGenBaseUrl" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="留空则使用主API地址"></div>
+                    <div><label class="block text-sm font-medium text-wechat-text mb-1">生图API Key</label><input type="password" id="imageGenApiKey" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="留空则使用主API Key"></div>
+                    <div><label class="block text-sm font-medium text-wechat-text mb-1">生图模型名</label><input type="text" id="imageGenModelName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如：gemini-2.0-flash-exp"></div>
+                    <div>
+                        <label class="block text-sm font-medium text-wechat-text mb-1">接口类型</label>
+                        <div class="flex items-center gap-4 mt-1">
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="imageGenInterface" id="imageGenInterfaceChat" value="chat" checked class="text-wechat-green focus:ring-wechat-green"><span class="text-sm">/chat/completions</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="imageGenInterface" id="imageGenInterfaceImages" value="images" class="text-wechat-green focus:ring-wechat-green"><span class="text-sm">/images/generations</span></label>
+                        </div>
+                <p class="text-xs text-wechat-lightText mt-1">Gemini/GPT-4o选chat，DALL-E 选 images</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 辅助API配置 -->
+            <div class="space-y-6">
+                <h3 class="text-base font-semibold text-wechat-text border-b border-wechat-darkGray pb-2"><i class="fa fa-cogs mr-1"></i>辅助API配置（可选）</h3>
+                <p class="text-xs text-wechat-lightText">处理好友评论、搜索角色关系等轻量级任务。全部留空则使用主模型。</p>
+                <div class="space-y-4">
+                    <div><label class="block text-sm font-medium text-wechat-text mb-1">辅助API地址</label><input type="text" id="auxBaseUrl" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="留空则使用主API地址"></div>
+                    <div><label class="block text-sm font-medium text-wechat-text mb-1">辅助API Key</label><input type="password" id="auxApiKey" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="留空则使用主API Key"></div>
+                    <div><label class="block text-sm font-medium text-wechat-text mb-1">辅助模型名</label><input type="text" id="auxModelName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如：gemini-2.0-flash、gpt-4o-mini"></div>
+                </div>
+            </div><!-- 保存按钮 -->
+            <button type="button" id="saveAllSettingsBtn" class="w-full bg-wechat-green text-white py-3 rounded-lg font-medium hover:bg-wechat-green/90 transition-colors"><i class="fa fa-save mr-2"></i>保存所有设置</button>
+            
+            <!-- 数据备份与恢复 -->
+            <div class="space-y-6">
+                <h3 class="text-base font-semibold text-wechat-text border-b border-wechat-darkGray pb-2">数据备份与恢复</h3>
+                <p class="text-sm text-wechat-lightText">您可以将全部聊天数据备份到一个压缩文件中。</p>
+                <div class="flex gap-3">
+                    <button type="button" id="backupDataBtn" class="flex-1 bg-wechat-green/10 text-wechat-green py-3 rounded-lg font-medium hover:bg-wechat-green/20 transition-colors"><i class="fa fa-download mr-2"></i><span>备份全部数据</span></button>
+                    <button type="button" id="restoreDataBtn" class="flex-1 bg-wechat-green/10 text-wechat-green py-3 rounded-lg font-medium hover:bg-wechat-green/20 transition-colors"><i class="fa fa-upload mr-2"></i><span>从文件恢复</span></button>
+                    <input type="file" id="restoreFileInput" class="hidden" accept=".zip">
+                </div>
+            </div>
+            <!--诊断与调试 -->
+            <div class="space-y-6">
+                <h3 class="text-base font-semibold text-wechat-text border-b border-wechat-darkGray pb-2">诊断与调试</h3>
+                <p class="text-sm text-wechat-lightText">如果遇到功能异常，可以查看内部日志以帮助定位问题。</p>
+                <div class="flex gap-3">
+                    <button type="button" id="viewLogsBtn" class="flex-1 bg-wechat-green/10 text-wechat-green py-3 rounded-lg font-medium"><i class="fa fa-file-text-o mr-2"></i>查看诊断日志</button>
+                    <button type="button" id="clearLogsBtn" class="flex-1 bg-wechat-red/10 text-wechat-red py-3 rounded-lg font-medium"><i class="fa fa-eraser mr-2"></i>清空日志</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 朋友圈页面 ========== -->
+    <div id="momentsPage" class="fixed inset-0 bg-white z-20 transform translate-x-full transition-transform duration-300 ease-in-out h-full flex flex-col">
+        <header class="bg-white border-b border-wechat-darkGray py-3 px-4 flex items-center justify-between shadow-sm z-10">
+            <h1 class="text-lg font-semibold">朋友圈</h1>
+            <div class="flex items-center gap-3">
+                <button id="npcFriendsBtn" class="text-wechat-text p-2 rounded-full hover:bg-wechat-gray transition-colors" title="好友管理"><i class="fa fa-users text-lg"></i></button>
+                <button id="openPublishMomentBtn" class="text-wechat-text p-2 rounded-full hover:bg-wechat-gray transition-colors" title="发朋友圈"><i class="fa fa-pencil-square-o text-lg"></i></button>
+                <button id="closeMomentsPageBtn" class="text-wechat-text p-2 rounded-full hover:bg-wechat-gray transition-colors" title="关闭"><i class="fa fa-times text-lg"></i></button>
+            </div>
+        </header>
+        <div class="flex-1 overflow-y-auto">
+            <div class="moments-cover">
+                <div class="moments-cover-bg"></div>
+                <div class="moments-user-info">
+                    <span id="momentsUserName" class="moments-user-name">我</span>
+                    <div id="momentsUserAvatar" class="moments-user-avatar"><i class="fa fa-user"></i></div>
+                </div>
+            </div>
+            <div id="momentsPublishingIndicator" class="hidden"></div>
+            <div id="momentsListContainer" class="moments-list-container bg-white"></div>
+        </div></div>
+
+    <!-- ========== 朋友圈动态详情页 ========== -->
+    <div id="momentDetailPage" class="fixed inset-0 bg-white z-30 transform translate-x-full transition-transform duration-300 ease-in-out h-full flex flex-col">
+        <header class="bg-white border-b border-wechat-darkGray py-3 px-4 flex items-center justify-between shadow-sm z-10">
+            <div class="flex items-center">
+                <button id="backToMomentsBtn" class="text-wechat-text p-2 mr-2"><i class="fa fa-arrow-left"></i></button>
+                <h1 class="text-lg font-semibold">动态详情</h1>
+            </div>
+            <button id="deleteMomentBtn" class="text-wechat-red p-2" title="删除动态"><i class="fa fa-trash"></i></button>
+        </header>
+        <div id="momentDetailContent" class="flex-1 overflow-y-auto"></div>
+        <div class="moment-comment-input bg-white border-t border-wechat-darkGray safe-area-bottom">
+            <div id="momentReplyIndicator"></div>
+            <div class="p-3 flex items-center gap-2">
+                <input type="text" id="momentCommentInput" class="flex-1 border border-wechat-darkGray rounded-full px-4 py-2 text-sm focus:input-focus" placeholder="写评论...">
+                <button id="momentCommentSendBtn" class="w-10 h-10 rounded-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 发布朋友圈模态框 ========== -->
+    <div id="publishMomentModal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg w-[90%] max-w-md max-h-[85vh] overflow-y-auto">
+            <div class="p-4 border-b border-wechat-darkGray flex items-center justify-between sticky top-0 bg-white z-10">
+                <h2 class="text-lg font-semibold">让TA发条朋友圈</h2>
+                <button id="closePublishMomentModalBtn" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-wechat-text mb-2">发布身份</label>
+                    <select id="momentsChatSelector" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus">
+                        <option value="__user__">我</option>
+                    </select>
+                    <p class="text-xs text-wechat-lightText mt-1">选择以谁的身份发布朋友圈</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-wechat-text mb-2">发布方式</label>
+                    <div class="flex gap-2">
+                        <button id="publishModeAuto" class="flex-1 py-2 px-3 rounded-lg border-2 border-wechat-green bg-wechat-green/10 text-wechat-green text-sm font-medium transition-all active">
+                            <i class="fa fa-magic mr-1"></i>AI自动生成
+                        </button>
+                        <button id="publishModeManual" class="flex-1 py-2 px-3 rounded-lg border-2 border-wechat-darkGray text-wechat-lightText text-sm font-medium transition-all">
+                            <i class="fa fa-pencil mr-1"></i>手动输入
+                        </button>
+                    </div>
+                </div>
+                <div id="publishAutoOptions">
+                    <label class="block text-sm font-medium text-wechat-text mb-2">生成依据</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="publishBasis" value="chat" checked class="text-wechat-green focus:ring-wechat-green">
+                            <span class="text-sm">基于最近的聊天内容</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="publishBasis" value="free" class="text-wechat-green focus:ring-wechat-green">
+                            <span class="text-sm">自由发挥（随机心情/日常）</span>
+                        </label>
+                    </div>
+                </div>
+                <div id="publishManualOptions" class="hidden">
+                    <label class="block text-sm font-medium text-wechat-text mb-2">动态内容</label>
+                    <textarea id="publishMomentContent" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus h-24" placeholder="写点什么..."></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-wechat-text mb-2">配图方式</label>
+                    <div class="flex gap-2">
+                        <button id="publishImageModeAI" class="flex-1 border-2 rounded-lg py-2 text-xs cursor-pointer img-mode-btn active" onclick="setImageMode('ai')">
+                            <i class="fa fa-magic"></i> AI生图
+                        </button>
+                        <button id="publishImageModeUrl" class="flex-1 border-2 rounded-lg py-2 text-xs cursor-pointer img-mode-btn" onclick="setImageMode('url')">
+                            <i class="fa fa-link"></i> 手动URL
+                        </button>
+                <button id="publishImageModeNone" class="flex-1 border-2 rounded-lg py-2 text-xs cursor-pointer img-mode-btn" onclick="setImageMode('none')">
+                            <i class="fa fa-ban"></i> 无图
+                        </button>
+                    </div>
+                </div>
+                <div id="publishImageAIArea">
+                    <p class="text-xs text-wechat-lightText"><i class="fa fa-info-circle"></i> 将根据文案自动生成配图（需配置生图API）<br>70%概率生成配图，模拟真实朋友圈</p>
+                </div>
+                <div id="publishImageUrlArea" class="hidden">
+                    <label class="block text-sm font-medium text-wechat-text mb-2">配图URL（每行一个，最多9张）</label>
+                    <textarea id="publishMomentImages" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus h-16" placeholder="https://example.com/image.jpg"></textarea>
+                </div>
+                <button id="confirmPublishMomentBtn" class="w-full bg-wechat-green text-white py-3 rounded-lg font-medium hover:bg-wechat-green/90 transition-colors">
+                    <i class="fa fa-send mr-2"></i>发布到朋友圈
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 日记列表页 ========== -->
+    <div id="diaryListPage" class="fixed inset-0 bg-white z-20 transform translate-x-full transition-transform duration-300 ease-in-out h-full flex flex-col">
+        <header class="bg-white border-b border-wechat-darkGray py-3 px-4 flex items-center justify-between shadow-sm z-10">
+            <h1 class="text-lg font-semibold">日记本</h1>
+            <button id="closeDiaryListPageBtn" class="text-wechat-text p-2 rounded-full hover:bg-wechat-gray transition-colors"><i class="fa fa-times"></i></button>
+        </header>
+        <div id="diaryListContainer" class="flex-1 diary-list-container bg-white"></div>
+    </div>
+
+    <!-- ========== 日记详情页 ========== -->
+    <div id="diaryDetailPage" class="fixed inset-0 bg-white z-30 transform translate-x-full transition-transform duration-300 ease-in-out h-full flex flex-col">
+        <header class="bg-white border-b border-wechat-darkGray py-3 px-4 flex items-center justify-between shadow-sm z-10">
+            <div class="flex items-center">
+                <button id="backToDiaryListBtn" class="text-wechat-text p-2 mr-2"><i class="fa fa-arrow-left"></i></button>
+                <h1 id="diaryDetailPageTitle" class="text-lg font-semibold"></h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="resetDiaryPtrBtn" title="重置指针" class="bg-wechat-red/10 text-wechat-red text-xs font-semibold py-1 px-3 rounded-full hover:bg-wechat-red/20 transition-colors"><i class="fa fa-history mr-1"></i>重置指针</button>
+                <button id="manualDiaryBtn" class="bg-wechat-green/10 text-wechat-green text-xs font-semibold py-1 px-3 rounded-full hover:bg-wechat-green/20 transition-colors"><i class="fa fa-pencil-square-o mr-1"></i>手动总结</button>
+            </div>
+        </header>
+        <div id="diaryEntriesContainer" class="flex-1 diary-entries-container p-4 bg-diary-bg/50"></div>
+    </div>
+
+    <!-- ========== 编辑日记模态框 ========== -->
+    <div id="editDiaryEntryModal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg w-[90%] max-w-lg">
+            <div class="p-4 border-b border-wechat-darkGray flex items-center justify-between">
+                <h2 class="text-lg font-semibold">编辑日记</h2>
+                <button id="closeEditDiaryModalBtn" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4"><textarea id="editDiaryEntryText" class="w-full border border-wechat-darkGray rounded-lg p-3 text-sm focus:input-focus" rows="10"></textarea></div>
+            <div class="p-4 border-t border-wechat-darkGray flex justify-end gap-3">
+                <button id="cancelEditDiaryBtn" class="bg-wechat-gray text-wechat-text py-2 px-4 rounded-lg text-sm">取消</button>
+                <button id="saveEditDiaryBtn" class="bg-wechat-green text-white py-2 px-4 rounded-lg text-sm">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 添加表情模态框 ========== -->
+    <div id="addStickerModal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg w-[90%] max-w-md">
+            <div class="p-4 border-b border-wechat-darkGray flex items-center justify-between">
+                <h2 class="text-lg font-semibold" id="addStickerModalTitle">添加表情图</h2>
+                <button id="closeAddStickerModalBtn" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4">
+                <div id="stickerUploadSection" class="sticker-add-section">
+                    <div class="sticker-upload-preview-box" id="stickerUploadPreviewBox">
+                        <span id="stickerUploadPlaceholder" style="color:#999;font-size:24px;">➕</span>
+                        <img src="" alt="" id="stickerUploadPreviewImg" style="display:none;">
+                    </div>
+                    <input type="file" id="stickerFileInput" accept="image/*" style="display:none;">
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-wechat-text mb-1">表情名称 *</label>
+                            <input type="text" id="uploadStickerName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如：开心"><p class="text-xs text-wechat-lightText mt-1">使用 :名称: 即可发送此表情</p>
+                        </div>
+                    </div>
+                </div><div id="stickerUrlSection" class="sticker-add-section" style="display:none;">
+                    <div class="sticker-upload-preview-box" id="stickerUrlPreviewBox">
+                        <span id="stickerUrlPlaceholder" style="color:#999;font-size:24px;">🔗</span>
+                        <img src="" alt="" id="stickerUrlPreviewImg" style="display:none;">
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-wechat-text mb-1">图片URL *</label>
+                            <input type="url" id="stickerUrlInput" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="https://example.com/sticker.gif">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-wechat-text mb-1">表情名称 *</label>
+                            <input type="text" id="urlStickerName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如：开心">
+                        </div>
+                    </div>
+                </div>
+                <div id="stickerImportSection" class="sticker-add-section" style="display:none;">
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-wechat-text mb-1">批量导入</label>
+                            <textarea id="stickerImportText" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" rows="6" placeholder="每行一个表情，格式：名称:URL"></textarea>
+                        </div>
+                        <div class="import-format-hint">
+                            <div class="import-format-hint-title">📋 导入格式示例</div>
+                            <div class="import-format-hint-code">怨念:https://files.catbox.moe/q72pav.gif
+开心:https://example.com/happy.gif</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-wechat-darkGray flex justify-end gap-3">
+                <button id="cancelAddStickerBtn" class="bg-wechat-gray text-wechat-text py-2 px-4 rounded-lg text-sm">取消</button>
+                <button id="confirmAddStickerBtn" class="bg-wechat-green text-white py-2 px-4 rounded-lg text-sm">添加表情</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 表情全屏预览 ========== -->
+    <div id="stickerFullViewModal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center cursor-zoom-out">
+        <img src="" alt="" id="stickerFullViewImg" style="max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;">
+    </div>
+
+    <!-- ========== 新增聊天对象模态框 ========== -->
+    <div id="addChatModal" class="fixed inset-0 bg-black/50 z-30 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg w-[90%] max-w-md max-h-[85vh] overflow-y-auto safe-area-bottom">
+            <div class="p-4 border-b border-wechat-darkGray flex items-center justify-between sticky top-0 bg-white z-10">
+                <h2 class="text-lg font-semibold">新增聊天对象</h2>
+                <button id="closeAddChatModalBtn" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4 space-y-6 pb-10">
+                <div class="space-y-3">
+                    <label class="block text-sm font-medium text-wechat-text">聊天对象头像</label>
+                    <div class="flex flex-col items-center">
+                        <div class="relative mb-3">
+                            <img id="newChatAvatarPreview" class="avatar-preview" alt="头像预览">
+                            <i id="newChatAvatarIcon" class="fa fa-robot absolute inset-0 flex items-center justify-center text-white text-xl bg-wechat-green rounded-full"></i>
+                        </div>
+                        <div class="flex gap-3 w-full max-w-xs">
+                            <label class="flex-1 text-center">
+                                <input type="file" id="newChatAvatarUpload" accept="image/*" class="hidden">
+                                <button type="button" class="avatar-upload-btn" onclick="document.getElementById('newChatAvatarUpload').click()"><i class="fa fa-upload mr-1"></i> 本地上传</button>
+                            </label>
+                            <button type="button" class="flex-1 avatar-upload-btn" id="newChatAvatarUrlBtn"><i class="fa fa-link mr-1"></i> 输入URL</button>
+                        </div>
+                        <div id="newChatAvatarUrlContainer" class="w-full max-w-xs mt-3 hidden">
+                            <input type="url" id="newChatAvatarUrl" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="输入头像图片URL">
+                            <div class="flex gap-2 mt-2">
+                                <button type="button" class="flex-1 bg-wechat-green text-white py-2 rounded-lg text-sm" id="newChatAvatarUrlConfirm">确认</button>
+                                <button type="button" class="flex-1 bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm" id="newChatAvatarUrlCancel">取消</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">聊天对象名称</label><input type="text" id="newChatName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如：编程高手" value="AI助手"></div>
+                <div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">人设提示词</label><textarea id="newChatSystemPrompt" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm resize-none focus:input-focus h-32" placeholder="描述AI的角色、性格、说话风格..."></textarea></div>
+                <button type="button" id="createChatBtn" class="w-full bg-wechat-green text-white py-3 rounded-lg font-medium hover:bg-wechat-green/90 transition-colors">创建聊天</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 聊天对象详情页 ========== -->
+    <div id="chatDetailPage" class="fixed inset-0 bg-white z-30 flex flex-col h-full transform translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto safe-area-bottom">
+        <header class="bg-white border-b border-wechat-darkGray py-3 px-4 flex items-center justify-between shadow-sm z-10">
+            <button id="backToChatPageBtn" class="text-wechat-text p-2 mr-2"><i class="fa fa-arrow-left"></i></button>
+            <h2 class="text-lg font-semibold">聊天对象详情</h2>
+            <button id="deleteChatBtn" class="text-wechat-red p-2 mr-2" title="从列表移除"><i class="fa fa-trash"></i></button>
+        </header>
+        <div class="flex-1 overflow-y-auto pb-20">
+            <div class="chat-detail-header">
+                <div class="relative mb-3">
+                    <img id="editChatAvatarPreview" class="avatar-preview" alt="头像预览">
+                    <i id="editChatAvatarIcon" class="fa fa-robot absolute inset-0 flex items-center justify-center text-white text-xl bg-wechat-green rounded-full"></i>
+                </div>
+                <button type="button" id="editAvatarBtn" class="text-wechat-green text-sm"><i class="fa fa-camera mr-1"></i> 更换头像</button>
+            </div>
+            <div class="p-4 space-y-6">
+                <div id="editAvatarContainer" class="space-y-3 hidden">
+                    <div class="flex gap-3 w-full max-w-xs mx-auto">
+                        <label class="flex-1 text-center">
+                            <input type="file" id="editChatAvatarUpload" accept="image/*" class="hidden">
+                            <button type="button" class="avatar-upload-btn" onclick="document.getElementById('editChatAvatarUpload').click()"><i class="fa fa-upload mr-1"></i> 本地上传</button>
+                        </label>
+                        <button type="button" class="flex-1 avatar-upload-btn" id="editChatAvatarUrlBtn"><i class="fa fa-link mr-1"></i> 输入URL</button>
+                    </div>
+                    <div id="editChatAvatarUrlContainer" class="w-full max-w-xs mx-auto hidden">
+                        <input type="url" id="editChatAvatarUrl" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="输入头像图片URL">
+                        <div class="flex gap-2 mt-2">
+                            <button type="button" class="flex-1 bg-wechat-green text-white py-2 rounded-lg text-sm" id="editChatAvatarUrlConfirm">确认</button>
+                            <button type="button" class="flex-1 bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm" id="editChatAvatarUrlCancel">取消</button>
+                        </div>
+                    </div>
+                    <button type="button" class="w-full max-w-xs mx-auto bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm" id="cancelEditAvatarBtn">取消更换</button>
+                </div>
+                <div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">聊天对象名称</label><input type="text" id="editChatName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="输入聊天对象的名称"></div>
+                <div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">人设提示词</label><textarea id="editChatSystemPrompt" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm resize-none focus:input-focus h-32" placeholder="描述AI的角色、性格、说话风格..."></textarea></div>
+                <button type="button" id="saveChatDetailBtn" class="w-full bg-wechat-green text-white py-3 rounded-lg font-medium hover:bg-wechat-green/90 transition-colors">保存修改</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 确认删除模态框 ========== -->
+    <div id="confirmDeleteModal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg w-[80%] max-w-sm p-4">
+            <h3 class="text-lg font-semibold text-center mb-4">从列表移除</h3>
+            <p class="text-center text-wechat-text mb-6">确定要从列表中移除此聊天吗？</p>
+            <div class="flex gap-3">
+                <button type="button" id="cancelDeleteBtn" class="flex-1 bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm">取消</button>
+                <button type="button" id="confirmDeleteBtn" class="flex-1 bg-wechat-red text-white py-2 rounded-lg text-sm">确认移除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 消息右键菜单 ========== -->
+    <div id="messageContextMenu" class="message-context-menu hidden">
+        <button id="editMessageBtn" class="w-full text-left px-2 py-1 hover:bg-wechat-gray rounded"><i class="fa fa-pencil mr-2"></i>修改</button>
+        <button id="resendMessageBtn" class="w-full text-left px-2 py-1 hover:bg-wechat-gray rounded"><i class="fa fa-send mr-2"></i>重新发送</button>
+        <button id="regenerateMessageBtn" class="w-full text-left px-2 py-1 hover:bg-wechat-gray rounded"><i class="fa fa-refresh mr-2"></i>重新生成</button>
+        <button id="deleteMessageBtn" class="w-full text-left px-2 py-1 hover:bg-wechat-gray rounded text-wechat-red"><i class="fa fa-trash mr-2"></i>删除</button>
+    </div>
+
+    <!-- ========== 恢复选择模态框 ========== -->
+    <div id="restoreModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg w-[90%] max-w-md max-h-[85vh] flex flex-col">
+            <div class="p-4 border-b border-wechat-darkGray flex items-center justify-between sticky top-0 bg-white z-10">
+                <h2 class="text-lg font-semibold">从备份恢复</h2>
+                <button id="closeRestoreModalBtn" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4 flex-1 overflow-y-auto space-y-4">
+                <p class="text-sm text-wechat-lightText">选择要恢复的聊天对象：</p>
+                <div class="space-y-2 max-h-64 overflow-y-auto border-y border-wechat-darkGray py-2" id="restoreChatList"></div>
+                <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="restoreSelectAll" class="rounded border-gray-300 text-wechat-green focus:ring-wechat-green"><span class="text-sm">全选/全不选</span></label>
+            </div>
+            <div class="p-4 border-t border-wechat-darkGray flex gap-3">
+                <button type="button" id="cancelRestoreBtn" class="flex-1 bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm">取消</button>
+                <button type="button" id="confirmRestoreBtn" class="flex-1 bg-wechat-green text-white py-2 rounded-lg text-sm">确认恢复</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 日志模态框 ========== -->
+    <div id="logModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-lg w-full h-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div class="p-4 border-b border-wechat-darkGray flex items-center justify-between">
+                <h2 class="text-lg font-semibold">诊断日志</h2>
+                <button id="closeLogModalBtn" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4 flex-1 overflow-y-auto"><textarea id="logOutput" readonly class="w-full h-full text-xs font-mono bg-wechat-gray p-2 rounded-md border border-wechat-darkGray resize-none"></textarea></div>
+            <div class="p-4 border-t border-wechat-darkGray text-center text-xs text-wechat-lightText">请复制以上所有内容发送给开发者</div>
+        </div>
+    </div>
+
+    <!-- ========== NPC好友管理模态框 ========== -->
+    <div id="npcFriendsModal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg w-[90%] max-w-md max-h-[85vh] overflow-y-auto">
+            <div class="p-4 border-b border-wechat-darkGray flex items-center justify-between sticky top-0 bg-white z-10">
+                <h2 class="text-lg font-semibold">好友管理</h2>
+                <button onclick="closeNpcFriendsModal()" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4 space-y-4">
+                <div id="npcFriendsListContainer" class="space-y-2 max-h-40 overflow-y-auto"></div>
+                <div class="border-t border-wechat-darkGray pt-4 space-y-3">
+                    <h4 class="text-sm font-semibold text-wechat-lightText" id="npcFriendFormTitle">手动添加好友</h4>
+                    <input type="text" id="npcFriendName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="好友名称">
+                    <input type="text" id="npcFriendRelation" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="与角色的关系（如：闺蜜、同事）">
+                    <input type="text" id="npcFriendPersonality" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="性格特点（如：活泼开朗）">
+                    <select id="npcFriendBindChat" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus">
+                        <option value="">不绑定（所有人共享）</option>
+                    </select>
+                    <div class="flex gap-2">
+                        <button onclick="addNpcFriend()" id="npcFriendAddBtn" class="flex-1 bg-wechat-green text-white py-2 rounded-lg text-sm hover:bg-wechat-green/90"><i class="fa fa-plus mr-1"></i> <span>添加</span></button>
+                        <button onclick="cancelEditNpcFriend()" id="npcFriendCancelEditBtn" class="flex-1 bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm" style="display:none;"><i class="fa fa-times mr-1"></i>取消编辑</button>
+                        <button onclick="openAiSuggestModal()" id="npcFriendAiBtn" class="flex-1 bg-wechat-green/10 text-wechat-green py-2 rounded-lg text-sm hover:bg-wechat-green/20"><i class="fa fa-magic mr-1"></i> AI推荐</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== AI推荐好友模态框 ========== -->
+    <div id="aiSuggestFriendsModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg w-[90%] max-w-md max-h-[85vh] overflow-y-auto">
+            <div class="p-4 border-b border-wechat-darkGray flex items-center justify-between sticky top-0 bg-white z-10">
+                <h2 class="text-lg font-semibold">AI推荐好友</h2>
+                <button onclick="closeAiSuggestModal()" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4 space-y-4">
+                <p class="text-xs text-wechat-lightText">选择一个角色，AI会分析其人设并推荐合理的好友角色</p>
+                <select id="aiSuggestTargetChat" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus">
+                    <option value="">选择角色</option>
+                </select>
+                <button id="startAiSuggestBtn" onclick="startAiSuggest()" class="w-full bg-wechat-green text-white py-2 rounded-lg text-sm hover:bg-wechat-green/90">
+                    <i class="fa fa-search mr-1"></i> 开始推荐
+                </button>
+                <div id="aiSuggestResults" class="space-y-2 max-h-60 overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- JS 文件引入 -->
+<script src="js/utils.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/stickers.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/diary.js"></script>
+<script src="js/moments.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
