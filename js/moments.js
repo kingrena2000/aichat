@@ -220,6 +220,8 @@ async function generateImageByAI(prompt) {
                 body: JSON.stringify(reqBody)
             });
 
+            logToUI(`[生图] 完整响应长度: ${JSON.stringify(data).length}, 内容: ${JSON.stringify(data).substring(0, 1000)}`);
+
             const msg = data.choices && data.choices[0] && data.choices[0].message;
             if (!msg) {
                 logToUI('[生图] API返回中没有 choices[0].message');
@@ -956,32 +958,51 @@ async function generateMomentCommentReply(moment, userComment) {
     const chat = appData.chatObjects.find(c => c.id === moment.chatId);
     if (!chat || !appData.apiConfig.apiKey) return;
 
-    showAiReplyingIndicator('正在回复...');
+    showAiReplyingIndicator(`${chat.name} 正在回复...`);
 
     try {
         const userName = appData.userInfo.name || '用户';
-        const systemPrompt = `${appData.apiConfig.globalSystemPrompt}\n\n${chat.systemPrompt}\n\n你之前发了一条朋友圈动态：\n"${moment.content}"\n\n现在${userName}在你的动态下评论了，请你用简短自然的口吻回复（不超过50字），像真人朋友圈互动一样。不要用引号包裹。`;
 
-        const recentComments = (moment.comments || []).slice(-6).map(c => ({
-            role: c.role === 'user' ? 'user' : 'assistant',
-            content: c.content
-        }));
+        // 构建评论区上下文（纯文本标注，不混淆角色）
+        const recentComments = (moment.comments || []).slice(-10);
+        let threadContext = '';
+        if (recentComments.length > 1) {
+            const lines = recentComments.map(c => {
+                const author = getCommentAuthorInfo(c, moment.chatId);
+                const replyPart = c.replyTo && c.replyToName ? `（回复${c.replyToName}）` : '';
+                return `${author.name}${replyPart}：${c.content}`;
+            });
+            threadContext = `\n\n以下是这条朋友圈下的评论记录（注意：其他人说的话不是你说的，不要混淆）：\n${lines.join('\n')}`;
+        }
 
+        const systemPrompt = `${appData.apiConfig.globalSystemPrompt}\n\n${chat.systemPrompt}\n\n你之前发了一条朋友圈动态：\n"${moment.content}"${threadContext}\n\n现在${userName}在你的动态下对你说：\n"${userComment}"\n\n请你以${chat.name}的身份，用简短自然的口吻回复${userName}（不超过50字），像真人朋友圈互动一样。只输出你的回复内容，不要用引号包裹。`;
+
+        // 发布者使用主模型 + 角色完整systemPrompt
         const data = await fetchWithRetry(`${appData.apiConfig.baseUrl}/chat/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${appData.apiConfig.apiKey}` },
-            body: JSON.stringify({ model: appData.apiConfig.modelName, messages: [{ role: 'system', content: systemPrompt }, ...recentComments], temperature: appData.apiConfig.temperature })
+            body: JSON.stringify({
+                model: appData.apiConfig.modelName,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userComment }
+                ],
+                temperature: appData.apiConfig.temperature
+            })
         });
 
         const aiReply = cleanAiResponse(data.choices[0].message.content);
         if (aiReply) {
+            const userComments = (moment.comments || []).filter(c => c.role === 'user');
+            const lastUserComment = userComments.length > 0 ? userComments[userComments.length - 1] : null;
+
             moment.comments.push({
                 id: generateUniqueId(),
                 role: 'assistant',
                 chatId: chat.id,
                 content: aiReply,
                 timestamp: Date.now(),
-                replyTo: moment.comments[moment.comments.length - 1]?.id,
+                replyTo: lastUserComment ? lastUserComment.id : undefined,
                 replyToName: userName
             });
             saveMomentsData();
@@ -995,19 +1016,34 @@ async function generateMomentCommentReply(moment, userComment) {
     }
 }
 
+
 // 回复指定评论者 → 该评论者再次回复
 async function generateReplyFromTarget(moment, userComment, target) {
     showAiReplyingIndicator(`${target.authorName} 正在回复...`);
 
     try {
-        let systemPrompt = '';
         const userName = appData.userInfo.name || '用户';
+        const publisher = getMomentPublisherInfo(moment);
+        const publisherName = publisher.name;
+
+        // 构建评论区上下文
+        const recentComments = (moment.comments || []).slice(-8);
+        let threadContext = '';
+        if (recentComments.length > 0) {
+            const lines = recentComments.map(c => {
+                const author = getCommentAuthorInfo(c, moment.chatId);
+                const replyPart = c.replyTo && c.replyToName ? `（回复${c.replyToName}）` : '';
+                return `${author.name}${replyPart}：${c.content}`;
+            });
+            threadContext = `\n\n评论区最近的对话记录：\n${lines.join('\n')}`;
+        }
 
         if (target.chatId) {
-            // 回复的是一个角色
+            //===== 回复的是一个角色（用主模型 + 角色systemPrompt）=====
             const chat = appData.chatObjects.find(c => c.id === target.chatId);
             if (!chat) { hideAiReplyingIndicator(); return; }
-            systemPrompt = `${appData.apiConfig.globalSystemPrompt}\n\n${chat.systemPrompt}\n\n你在一条朋友圈动态下发表了评论。现在${userName}回复了你的评论，请你用简短自然的口吻再次回复（不超过50字），像真人朋友圈互动一样。`;
+
+            const systemPrompt = `${appData.apiConfig.globalSystemPrompt}\n\n${chat.systemPrompt}\n\n场景：${publisherName}发了一条朋友圈动态：\n"${moment.content}"\n\n你在这条动态下发表了评论。${threadContext}\n\n现在${userName}回复了你的评论，请你以${chat.name}的身份，用简短自然的口吻回复${userName}（不超过50字），像真人朋友圈互动一样。只输出回复内容。`;
 
             const data = await fetchWithRetry(`${appData.apiConfig.baseUrl}/chat/completions`, {
                 method: 'POST',
@@ -1031,16 +1067,35 @@ async function generateReplyFromTarget(moment, userComment, target) {
                 });
                 saveMomentsData();
             }
-        } else if (target.npcFriendId) {
-            // 回复的是一个手动添加的NPC好友
+
+            // ★ 如果回复的不是发布者本人，触发发布者也来回复用户
+            if (moment.chatId !== '__user__' && target.chatId !== moment.chatId) {
+                await generateMomentCommentReply(moment, userComment);
+            }} else if (target.npcFriendId) {
+            // ===== 回复的是手动NPC好友（辅助模型 + 注入用户关系）=====
             const friend = appData.npcFriends.find(f => f.id === target.npcFriendId);
             if (!friend) { hideAiReplyingIndicator(); return; }
-            systemPrompt = `你是${friend.name}，性格：${friend.personality || '普通朋友'}。你在一条朋友圈动态下发表了评论。现在${userName}回复了你，请用简短自然的口吻再次回复（不超过30字）。`;
+
+            const userRelDesc = friend.userRelationship
+                ? `\n你与${userName}的关系是：${friend.userRelationship}。你对${userName}的态度和说话方式应该符合这层关系。`
+                : `\n你认识${userName}，TA是${publisherName}生活中重要的人。`;
+
+            const systemPrompt = `你是${friend.name}，与${publisherName}的关系是：${friend.relationship || '朋友'}，你的性格：${friend.personality || '普通'}。${userRelDesc}
+
+场景：${publisherName}发了一条朋友圈动态：
+"${moment.content}"
+
+你在这条动态下发表了评论。${threadContext}
+
+现在${userName}回复了你：
+"${userComment}"
+
+请以${friend.name}的身份，用简短自然的口吻回复（不超过40字），体现你的性格和与${userName}的关系。只输出回复内容。`;
 
             const reply = await callAuxApi([
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userComment }
-            ], 0.8);
+            ],0.8);
 
             const cleaned = cleanAiResponse(reply);
             if (cleaned) {
@@ -1050,10 +1105,31 @@ async function generateReplyFromTarget(moment, userComment, target) {
                     replyTo: target.commentId, replyToName: userName
                 });
                 saveMomentsData();
+            }// ★ 用户回复NPC后，发布者也来回复用户
+            if (moment.chatId !== '__user__') {
+                // 先渲染一次让用户看到NPC的回复
+                if (appData.momentDetailId === moment.id) renderMomentDetail(moment.id);
+                renderMomentsList();
+                await generateMomentCommentReply(moment, userComment);
             }
+
         } else if (target.tempName) {
-            // 回复的是临时好友（搜索/虚构的）
-            systemPrompt = `你是${target.tempName}，与朋友圈主人的关系是${target.tempRelation || '朋友'}，性格：${target.tempPersonality || '普通'}。${userName}回复了你在朋友圈下的评论，请用简短自然的口吻再次回复（不超过30字）。`;
+            // ===== 回复的是临时好友（辅助模型）=====
+            const userRelDesc = target.tempUserRelation
+                ? `\n你与${userName}的关系是：${target.tempUserRelation}。`
+                : `\n你认识${userName}，TA是${publisherName}生活中重要的人。`;
+
+            const systemPrompt = `你是${target.tempName}，与${publisherName}的关系是${target.tempRelation || '朋友'}，性格：${target.tempPersonality || '普通'}。${userRelDesc}
+
+场景：${publisherName}发了一条朋友圈动态：
+"${moment.content}"
+
+你在这条动态下发表了评论。${threadContext}
+
+现在${userName}回复了你：
+"${userComment}"
+
+请以${target.tempName}的身份，用简短自然的口吻回复（不超过40字），体现你的性格和身份。只输出回复内容。`;
 
             const reply = await callAuxApi([
                 { role: 'system', content: systemPrompt },
@@ -1070,6 +1146,13 @@ async function generateReplyFromTarget(moment, userComment, target) {
                 });
                 saveMomentsData();
             }
+
+            // ★ 用户回复临时好友后，发布者也来回复
+            if (moment.chatId !== '__user__') {
+                if (appData.momentDetailId === moment.id) renderMomentDetail(moment.id);
+                renderMomentsList();
+                await generateMomentCommentReply(moment, userComment);
+            }
         }
     } catch (e) {
         logToUI(`回复评论者失败: ${e.message}`);
@@ -1079,6 +1162,7 @@ async function generateReplyFromTarget(moment, userComment, target) {
         renderMomentsList();
     }
 }
+
 
 function showAiReplyingIndicator(text) {
     const indicator = document.getElementById('momentAiReplyingIndicator');
@@ -1103,23 +1187,18 @@ async function generateFriendComments(moment) {
     const commenters = [];
 
     if (isUserPost) {
-        // 用户发的 → 所有角色 + 随机好友
         for (const chat of appData.chatObjects) {
             commenters.push({ type: 'chat', chat, name: chat.name });
-        }
-        // 随机选一些手动好友
-        const allFriends = [...appData.npcFriends];
+        }const allFriends = [...appData.npcFriends];
         const friendCount = Math.min(allFriends.length, Math.ceil(allFriends.length * 0.6));
         const shuffledFriends = allFriends.sort(() => Math.random() - 0.5).slice(0, friendCount);
         for (const f of shuffledFriends) {
             commenters.push({ type: 'npc', friend: f, name: f.name });
         }
     } else {
-        // 角色发的 → 手动好友 + 临时好友（不拉其他角色）
         const chat = appData.chatObjects.find(c => c.id === moment.chatId);
         if (!chat) return;
 
-        // 手动添加的好友（绑定了该角色 或 未绑定任何角色的共享好友）
         const manualFriends = getRelatedFriends(chat.id);
 
         if (manualFriends.length >= 2) {
@@ -1139,31 +1218,32 @@ async function generateFriendComments(moment) {
         }
     }
 
-
     if (commenters.length === 0) return;
 
-    // 随机选40%-70%来评论
     const total = commenters.length;
     const minCount = Math.max(1, Math.ceil(total * 0.4));
     const maxCount = Math.ceil(total * 0.7);
     const count = Math.min(total, minCount + Math.floor(Math.random() * (maxCount - minCount + 1)));
     const selected = commenters.sort(() => Math.random() - 0.5).slice(0, count);
 
-    // 分批生成：角色单独调，NPC/临时2-3个一批
     const chatCommenters = selected.filter(c => c.type === 'chat');
     const npcCommenters = selected.filter(c => c.type === 'npc' || c.type === 'temp');
 
-    // 逐条生成角色评论
     for (const item of chatCommenters) {
         await generateSingleChatComment(moment, item.chat);
     }
 
-    // 批量生成NPC评论（2-3个一批）
     for (let i = 0; i < npcCommenters.length; i += 3) {
         const batch = npcCommenters.slice(i, i + 3);
         await generateBatchNpcComments(moment, batch);
     }
+
+    //★ NPC评论完成后，发布者随机回复其中一些
+    if (!isUserPost) {
+        await generatePublisherReplyToNpcComments(moment);
+    }
 }
+
 
 // ==================== 手动刷新好友评论 ====================
 
@@ -1239,11 +1319,14 @@ async function generateBatchNpcComments(moment, batch) {
 
     try {
         const publisher = getMomentPublisherInfo(moment);
+        const userName = appData.userInfo.name || '用户';
+
         const friendDescs = batch.map((b, i) => {
             if (b.type === 'npc' && b.friend) {
-                return `${i + 1}. ${b.friend.name}（关系：${b.friend.relationship || '朋友'}，性格：${b.friend.personality || '普通'}）`;
+                const ur = b.friend.userRelationship ? `，与${userName}的关系：${b.friend.userRelationship}` : '';
+                return `${i + 1}. ${b.friend.name}（与${publisher.name}的关系：${b.friend.relationship || '朋友'}，性格：${b.friend.personality || '普通'}${ur}）`;
             } else if (b.type === 'temp' && b.tempFriend) {
-                return `${i + 1}. ${b.tempFriend.name}（关系：${b.tempFriend.relationship || '朋友'}，性格：${b.tempFriend.personality || '普通'}）`;
+                return `${i + 1}. ${b.tempFriend.name}（与${publisher.name}的关系：${b.tempFriend.relationship || '朋友'}，性格：${b.tempFriend.personality || '普通'}）`;
             }
             return `${i + 1}. ${b.name}`;
         }).join('\n');
@@ -1251,7 +1334,9 @@ async function generateBatchNpcComments(moment, batch) {
         const prompt = `${publisher.name}发了一条朋友圈：
 "${moment.content}"
 
-以下好友要分别评论这条朋友圈，请为每人写一条简短自然的评论（每条不超过30字），像真人朋友圈互动。
+补充信息：${userName}是${publisher.name}生活中非常重要的人。以下好友如果标注了与${userName}的关系，评论风格应体现这层关系。
+
+以下好友要分别评论这条朋友圈，请为每人写一条简短自然的评论（每条不超过30字），像真人朋友圈互动。每个人的评论风格应该符合他们的性格和与${publisher.name}的关系。
 
 好友列表：
 ${friendDescs}
@@ -1271,14 +1356,13 @@ ${friendDescs}
             const commentName = parts[0].replace(/^\d+[\.\、\)]\s*/, '');
             const commentContent = parts[1];
 
-            // 匹配到对应的commenter
             const matched = batch.find(b => b.name === commentName || commentName.includes(b.name) || b.name.includes(commentName));
 
             const comment = {
                 id: generateUniqueId(),
                 role: 'npc',
                 content: commentContent,
-                timestamp: Date.now() + Math.random() * 60000 // 随机错开时间
+                timestamp: Date.now() + Math.random() * 60000
             };
 
             if (matched) {
@@ -1303,9 +1387,87 @@ ${friendDescs}
     } catch (e) {
         logToUI(`批量NPC评论生成失败: ${e.message}`);
     } finally {
-        if (isDetailOpen) hideAiReplyingIndicator();
-    }
+        if (isDetailOpen) hideAiReplyingIndicator();}
 }
+
+//★ 发布者随机回复NPC好友的留言
+async function generatePublisherReplyToNpcComments(moment) {
+    if (moment.chatId === '__user__') return;
+
+    const chat = appData.chatObjects.find(c => c.id === moment.chatId);
+    if (!chat || !appData.apiConfig.apiKey) return;
+
+    // 收集NPC/其他角色的评论（排除发布者自己和用户）
+    const npcComments = (moment.comments || []).filter(c =>
+        c.role === 'npc' || (c.role === 'assistant' && c.chatId && c.chatId !== chat.id)
+    );
+
+    if (npcComments.length === 0) return;
+
+    // 随机选1-2条来回复（每条30%概率，至少保底1条50%概率）
+    let toReply = npcComments.filter(() => Math.random() < 0.3);
+    if (toReply.length === 0 && Math.random() < 0.5) {
+        toReply.push(npcComments[Math.floor(Math.random() * npcComments.length)]);
+    }
+    toReply = toReply.slice(0, 2);
+
+    if (toReply.length === 0) return;
+
+    const isDetailOpen = appData.momentDetailId === moment.id;
+
+    for (const comment of toReply) {
+        const author = getCommentAuthorInfo(comment, moment.chatId);
+
+        if (isDetailOpen) showAiReplyingIndicator(`${chat.name} 正在回复${author.name}...`);
+
+        try {
+            // 构建评论区上下文
+            const recentComments = (moment.comments || []).slice(-8);
+            const threadLines = recentComments.map(c => {
+                const a = getCommentAuthorInfo(c, moment.chatId);
+                const reply = c.replyToName ? `（回复${c.replyToName}）` : '';
+                return `${a.name}${reply}：${c.content}`;
+            });
+
+            const systemPrompt = `${appData.apiConfig.globalSystemPrompt}\n\n${chat.systemPrompt}\n\n你发了一条朋友圈动态：\n"${moment.content}"\n\n评论区对话记录：\n${threadLines.join('\n')}\n\n${author.name}评论了你的朋友圈："${comment.content}"\n\n请以${chat.name}的身份回复${author.name}（不超过30字），像真人朋友圈互动。只输出回复内容。`;
+
+            // 发布者使用主模型
+            const data = await fetchWithRetry(`${appData.apiConfig.baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${appData.apiConfig.apiKey}` },
+                body: JSON.stringify({
+                    model: appData.apiConfig.modelName,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: `${author.name}说：${comment.content}` }
+                    ],
+                    temperature: appData.apiConfig.temperature
+                })
+            });
+
+            const aiReply = cleanAiResponse(data.choices[0].message.content);
+            if (aiReply) {
+                moment.comments.push({
+                    id: generateUniqueId(),
+                    role: 'assistant',
+                    chatId: chat.id,
+                    content: aiReply,
+                    timestamp: Date.now(),
+                    replyTo: comment.id,
+                    replyToName: author.name
+                });
+                saveMomentsData();
+                if (isDetailOpen) renderMomentDetail(moment.id);
+            }
+        } catch (e) {
+            logToUI(`发布者回复NPC评论失败: ${e.message}`);
+        }
+    }
+
+    if (isDetailOpen) hideAiReplyingIndicator();renderMomentsList();
+}
+
+
 // ==================== 切换发布模式 ====================
 
 function switchPublishMode(mode) {
@@ -1447,7 +1609,21 @@ async function confirmPublishMoment() {
             content = manualContent;
         } else {
             updatePublishingIndicator('正在生成文案...');
-            const prompt = `${appData.apiConfig.globalSystemPrompt}\n\n${chat.systemPrompt}\n\n请你以这个角色的身份，写一条朋友圈动态。要求：\n1. 符合角色性格和说话风格\n2. 内容自然真实，像真人发朋友圈\n3. 可以分享日常、心情、见闻等\n4. 不超过200字\n5. 只输出朋友圈文案，不要其他内容`;
+
+            // 收集该角色最近发过的朋友圈，避免重复
+            const recentPosts = appData.moments
+                .filter(m => m.chatId === chatId)
+                .sort((a, b) => b.timestamp - a.timestamp)
+                .slice(0, 5)
+                .map(m => `- ${m.content.substring(0, 80)}`);
+
+            let avoidRepeatHint = '';
+            if (recentPosts.length > 0) {
+                avoidRepeatHint = `\n\n【重要】你最近已经发过以下朋友圈，请不要发类似的内容，必须换一个完全不同的话题和角度：\n${recentPosts.join('\n')}`;
+            }
+
+            const prompt = `${appData.apiConfig.globalSystemPrompt}\n\n${chat.systemPrompt}\n\n请你以这个角色的身份，写一条朋友圈动态。要求：\n1. 符合角色性格和说话风格\n2. 内容自然真实，像真人发朋友圈\n3. 可以分享日常、心情、见闻等\n4. 不超过200字\n5. 只输出朋友圈文案，不要其他内容${avoidRepeatHint}`;
+
 
             const data = await fetchWithRetry(`${appData.apiConfig.baseUrl}/chat/completions`, {
                 method: 'POST',
@@ -1475,7 +1651,7 @@ async function confirmPublishMoment() {
             if (imgCfg.modelName) {
                 if (Math.random() < 0.7) {
                     updatePublishingIndicator('正在生成配图...');
-                    const imgPrompt = `为以下朋友圈内容生成一张配图，要求画面美观、符合内容氛围：\n\n"${content.substring(0, 200)}"`;
+                    const imgPrompt = `为以下朋友圈内容生成一张配图，要求画面美观、符合内容氛围。重要限制：如果画面中有人物，只能出现背影、侧影或远景剪影，绝对不要画出人类的面部细节和五官。\n\n"${content.substring(0, 200)}"`;
                     const imgData = await generateImageByAI(imgPrompt);
                     if (imgData) {
                         const imgRef = await saveGeneratedImage(imgData);
@@ -1568,23 +1744,23 @@ function openNpcFriendsModal() {
 }
 
 function closeNpcFriendsModal() {
-    // 退出编辑状态
     if (appData.npcFriendTempData && appData.npcFriendTempData.editingId) {
         appData.npcFriendTempData.editingId = null;
         updateNpcFriendFormUI(false);
     }
-    // 清空表单
     const nameEl = document.getElementById('npcFriendName');
     const relEl = document.getElementById('npcFriendRelation');
     const persEl = document.getElementById('npcFriendPersonality');
+    const userRelEl = document.getElementById('npcFriendUserRelation');
     const bindEl = document.getElementById('npcFriendBindChat');
     if (nameEl) nameEl.value = '';
     if (relEl) relEl.value = '';
     if (persEl) persEl.value = '';
+    if (userRelEl) userRelEl.value = '';
     if (bindEl) bindEl.value = '';
-
     DOM.npcFriendsModal.classList.add('hidden');
 }
+
 
 
 function renderNpcFriendsList() {
@@ -1601,18 +1777,20 @@ function renderNpcFriendsList() {
     container.innerHTML = appData.npcFriends.map(f => {
         const bindChat = f.bindChatId ? appData.chatObjects.find(c => c.id === f.bindChatId) : null;
         const bindText = bindChat ? `绑定: ${bindChat.name}` : '共享好友';
+        const userRelText = f.userRelationship ?` · 对用户: ${f.userRelationship}` : '';
         const isEditing = editingId === f.id;
         return `<div class="npc-friend-item" style="${isEditing ? 'border:2px solid #07C160;border-radius:8px;' : ''}">
             <div class="npc-friend-avatar"><i class="fa fa-user"></i></div>
             <div class="npc-friend-info" onclick="editNpcFriend('${f.id}')" style="cursor:pointer;" title="点击编辑">
                 <div class="npc-friend-name">${escapeHtml(f.name)}</div>
-                <div class="npc-friend-meta">${escapeHtml(f.relationship || '')} · ${escapeHtml(f.personality || '')} · ${escapeHtml(bindText)}</div>
+                <div class="npc-friend-meta">${escapeHtml(f.relationship || '')} · ${escapeHtml(f.personality || '')}${escapeHtml(userRelText)} · ${escapeHtml(bindText)}</div>
             </div>
             <button class="npc-friend-delete" onclick="event.stopPropagation();editNpcFriend('${f.id}')" title="编辑" style="color:#07C160;background:rgba(7,193,96,0.1);border:none;padding:4px 8px;border-radius:50%;cursor:pointer;margin-right:4px;"><i class="fa fa-pencil"></i></button>
             <button class="npc-friend-delete" onclick="event.stopPropagation();deleteNpcFriend('${f.id}')" title="删除"><i class="fa fa-trash"></i></button>
         </div>`;
     }).join('');
 }
+
 
 
 function refreshNpcFriendBindSelector() {
@@ -1631,6 +1809,7 @@ function addNpcFriend() {
     const nameEl = document.getElementById('npcFriendName');
     const relEl = document.getElementById('npcFriendRelation');
     const persEl = document.getElementById('npcFriendPersonality');
+    const userRelEl = document.getElementById('npcFriendUserRelation');
     const bindEl = document.getElementById('npcFriendBindChat');
 
     const name = nameEl ? nameEl.value.trim() : '';
@@ -1639,35 +1818,35 @@ function addNpcFriend() {
     const editingId = appData.npcFriendTempData ? appData.npcFriendTempData.editingId : null;
 
     if (editingId) {
-        // ===== 编辑模式：更新已有好友 =====
         const friend = appData.npcFriends.find(f => f.id === editingId);
         if (!friend) { cancelEditNpcFriend(); return; }
 
         friend.name = name;
         friend.relationship = relEl ? relEl.value.trim() : '';
         friend.personality = persEl ? persEl.value.trim() : '';
+        friend.userRelationship = userRelEl ? userRelEl.value.trim() : '';
         friend.bindChatId = bindEl ? bindEl.value : '';
 
         saveNpcFriendsData();
         logToUI(`编辑NPC好友: ${name}`);
         cancelEditNpcFriend();
     } else {
-        // ===== 添加模式：新建好友 =====
         const friend = {
             id: 'npc_' + generateUniqueId(),
             name: name,
             relationship: relEl ? relEl.value.trim() : '',
             personality: persEl ? persEl.value.trim() : '',
+            userRelationship: userRelEl ? userRelEl.value.trim() : '',
             bindChatId: bindEl ? bindEl.value : ''
         };
 
         appData.npcFriends.push(friend);
         saveNpcFriendsData();
 
-        // 清空表单
         if (nameEl) nameEl.value = '';
         if (relEl) relEl.value = '';
         if (persEl) persEl.value = '';
+        if (userRelEl) userRelEl.value = '';
         if (bindEl) bindEl.value = '';
 
         renderNpcFriendsList();
@@ -1689,15 +1868,16 @@ function editNpcFriend(id) {
     if (!appData.npcFriendTempData) appData.npcFriendTempData = {};
     appData.npcFriendTempData.editingId = id;
 
-    // 填充表单
     const nameEl = document.getElementById('npcFriendName');
     const relEl = document.getElementById('npcFriendRelation');
     const persEl = document.getElementById('npcFriendPersonality');
+    const userRelEl = document.getElementById('npcFriendUserRelation');
     const bindEl = document.getElementById('npcFriendBindChat');
 
     if (nameEl) nameEl.value = friend.name || '';
     if (relEl) relEl.value = friend.relationship || '';
     if (persEl) persEl.value = friend.personality || '';
+    if (userRelEl) userRelEl.value = friend.userRelationship || '';
     if (bindEl) bindEl.value = friend.bindChatId || '';
 
     updateNpcFriendFormUI(true);
@@ -1709,6 +1889,7 @@ function editNpcFriend(id) {
     }
 }
 
+
 function cancelEditNpcFriend() {
     if (!appData.npcFriendTempData) appData.npcFriendTempData = {};
     appData.npcFriendTempData.editingId = null;
@@ -1716,16 +1897,19 @@ function cancelEditNpcFriend() {
     const nameEl = document.getElementById('npcFriendName');
     const relEl = document.getElementById('npcFriendRelation');
     const persEl = document.getElementById('npcFriendPersonality');
+    const userRelEl = document.getElementById('npcFriendUserRelation');
     const bindEl = document.getElementById('npcFriendBindChat');
 
     if (nameEl) nameEl.value = '';
     if (relEl) relEl.value = '';
     if (persEl) persEl.value = '';
+    if (userRelEl) userRelEl.value = '';
     if (bindEl) bindEl.value = '';
 
     updateNpcFriendFormUI(false);
     renderNpcFriendsList();
 }
+
 
 function updateNpcFriendFormUI(isEditing) {
     const titleEl = document.getElementById('npcFriendFormTitle');

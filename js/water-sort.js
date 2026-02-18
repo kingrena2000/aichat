@@ -1,6 +1,5 @@
-/* =========================================================================
-   倒水排序 — 60关
-   反向打乱法 + 每瓶必满 + DFS生成验证
+/* =========================================================================倒水排序 — 60关
+   反向打乱法+ 每瓶必满+ DFS生成验证
    ========================================================================= */
 (function () {
     'use strict';
@@ -24,8 +23,7 @@
         [45, 7, 11, 2],
         [50, 7, 12, 2],
         [55, 8, 12, 2],
-        [60, 8, 13, 2],
-    ];
+        [60, 8, 13, 2],];
 
     function getLevelConfig(level) {
         for (const [maxLv, cc, tb, eb] of LEVEL_TABLE) {
@@ -54,6 +52,199 @@
     function save() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ m: S.maxLevel, l: S.level }));
     }
+
+    /* ============ 音效系统（Web Audio API 合成） ============ */
+    var audioCtx = null;
+
+    function getAudioCtx() {
+        if (!audioCtx) {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                return null;
+            }
+        }
+        // iOS需要 resume
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        return audioCtx;
+    }
+
+    //倒水音效：模拟水流咕噜声
+    function playPourSound() {
+        var ctx = getAudioCtx();
+        if (!ctx) return;
+        var now = ctx.currentTime;
+
+        // 白噪声 → 带通滤波 = 水流声
+        var duration = 0.35;
+        var bufferSize = Math.floor(ctx.sampleRate * duration);
+        var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        var data = buffer.getChannelData(0);
+        for (var i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1);
+        }
+
+        var noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        // 带通滤波器- 水流质感
+        var bandpass = ctx.createBiquadFilter();
+        bandpass.type = 'bandpass';
+        bandpass.frequency.setValueAtTime(800, now);
+        bandpass.frequency.linearRampToValueAtTime(1200, now + 0.1);
+        bandpass.frequency.linearRampToValueAtTime(600, now + duration);
+        bandpass.Q.value = 1.5;
+
+        // 低通 - 去掉刺耳高频
+        var lowpass = ctx.createBiquadFilter();
+        lowpass.type = 'lowpass';
+        lowpass.frequency.value = 2000;
+
+        // 音量包络
+        var gain = ctx.createGain();
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.25, now + 0.04);
+        gain.gain.setValueAtTime(0.25, now + 0.08);
+        gain.gain.linearRampToValueAtTime(0.15, now + duration * 0.6);
+        gain.gain.linearRampToValueAtTime(0, now + duration);
+
+        noise.connect(bandpass);
+        bandpass.connect(lowpass);
+        lowpass.connect(gain);
+        gain.connect(ctx.destination);
+
+        noise.start(now);
+        noise.stop(now + duration);
+
+        // 叠加几个气泡音（咕噜咕噜）
+        var bubbleFreqs = [420, 520, 380, 460];
+        var bubbleTimes = [0.04, 0.12, 0.2, 0.27];
+        for (var b = 0; b < bubbleFreqs.length; b++) {
+            var osc = ctx.createOscillator();
+            osc.type = 'sine';
+            var startT = now + bubbleTimes[b];
+            osc.frequency.setValueAtTime(bubbleFreqs[b], startT);
+            osc.frequency.exponentialRampToValueAtTime(bubbleFreqs[b] * 0.5, startT + 0.06);
+
+            var bGain = ctx.createGain();
+            bGain.gain.setValueAtTime(0, startT);
+            bGain.gain.linearRampToValueAtTime(0.06, startT + 0.01);
+            bGain.gain.exponentialRampToValueAtTime(0.001, startT + 0.06);
+
+            osc.connect(bGain);
+            bGain.connect(ctx.destination);
+            osc.start(startT);
+            osc.stop(startT + 0.07);
+        }
+    }
+
+    // 满瓶音效：清脆升调叮咚
+    function playCompleteSound() {
+        var ctx = getAudioCtx();
+        if (!ctx) return;
+        var now = ctx.currentTime;
+
+        // 三个递升音符 =叮-咚-叮♪
+        var notes = [
+            { freq: 880,  start: 0,dur: 0.15, vol: 0.18 },
+            { freq: 1109, start: 0.1,  dur: 0.15, vol: 0.16 },
+            { freq: 1319, start: 0.2,  dur: 0.3,  vol: 0.20 }
+        ];
+
+        for (var n = 0; n < notes.length; n++) {
+            var note = notes[n];
+            // 主音
+            var osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = note.freq;
+
+            // 泛音（清脆感）
+            var osc2 = ctx.createOscillator();
+            osc2.type = 'sine';
+            osc2.frequency.value = note.freq * 2;
+
+            var gain = ctx.createGain();
+            var t0 = now + note.start;
+            gain.gain.setValueAtTime(0, t0);
+            gain.gain.linearRampToValueAtTime(note.vol, t0 + 0.015);
+            gain.gain.exponentialRampToValueAtTime(0.001, t0 + note.dur);
+
+            var gain2 = ctx.createGain();
+            gain2.gain.setValueAtTime(0, t0);
+            gain2.gain.linearRampToValueAtTime(note.vol * 0.3, t0 + 0.01);
+            gain2.gain.exponentialRampToValueAtTime(0.001, t0 + note.dur * 0.7);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+
+            osc.start(t0);
+            osc.stop(t0 + note.dur + 0.01);
+            osc2.start(t0);
+            osc2.stop(t0 + note.dur + 0.01);
+        }
+    }
+
+    // 通关音效：欢快的旋律
+    function playWinSound() {
+        var ctx = getAudioCtx();
+        if (!ctx) return;
+        var now = ctx.currentTime;
+
+        var melody = [
+            { freq: 784,  start: 0,    dur: 0.12},
+            { freq: 988,  start: 0.1,  dur: 0.12 },
+            { freq: 1175, start: 0.2,  dur: 0.12 },
+            { freq: 1319, start: 0.3,  dur: 0.12 },
+            { freq: 1568, start: 0.4,  dur: 0.35 }
+        ];
+
+        for (var m = 0; m < melody.length; m++) {
+            var note = melody[m];
+            var osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = note.freq;
+
+            var osc2 = ctx.createOscillator();
+            osc2.type = 'triangle';
+            osc2.frequency.value = note.freq;
+
+            var gain = ctx.createGain();
+            var t0 = now + note.start;
+            gain.gain.setValueAtTime(0, t0);
+            gain.gain.linearRampToValueAtTime(0.15, t0 + 0.015);
+            gain.gain.exponentialRampToValueAtTime(0.001, t0 + note.dur);
+
+            var gain2 = ctx.createGain();
+            gain2.gain.setValueAtTime(0, t0);
+            gain2.gain.linearRampToValueAtTime(0.08, t0 + 0.015);
+            gain2.gain.exponentialRampToValueAtTime(0.001, t0 + note.dur);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+
+            osc.start(t0);
+            osc.stop(t0 + note.dur + 0.01);
+            osc2.start(t0);
+            osc2.stop(t0 + note.dur + 0.01);
+        }
+    }
+
+    // iOS首次触摸解锁 AudioContext
+    function unlockAudio() {
+        getAudioCtx();
+        document.removeEventListener('touchstart', unlockAudio);
+        document.removeEventListener('click', unlockAudio);
+    }
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('click', unlockAudio, { once: true });
+
+    /* ============================================================= */
 
     function makeRng(seed) {
         let s = (seed >>> 0) || 1;
@@ -89,7 +280,7 @@
         const rem = filledBottles % colorCount;
         const dist = [];
         for (let i = 0; i < colorCount; i++) {
-            dist.push(i < rem ? base + 1 : base);
+            dist.push(i< rem ? base + 1 : base);
         }
         return dist;
     }
@@ -170,16 +361,14 @@
         for (let attempt = 0; attempt < 150; attempt++) {
             const r = makeRng(baseSeed + attempt * 31337);
 
-            // 1. 完成状态
             const temp = [];
             for (let c = 0; c < colorCount; c++) {
                 for (let j = 0; j < dist[c]; j++) temp.push([c, c, c, c]);
             }
             for (let i = 0; i < emptyBottles; i++) temp.push([]);
 
-            // 2. 反向打乱
             const n = temp.length;
-            const steps = filled * 25 + Math.floor(r() * filled * 15);
+            const steps = filled * 25+ Math.floor(r() * filled * 15);
             for (let s = 0; s < steps; s++) {
                 const f = Math.floor(r() * n);
                 const t = Math.floor(r() * n);
@@ -189,19 +378,16 @@
                 for (let k = 0; k < cnt; k++) temp[t].push(temp[f].pop());
             }
 
-            // 3. 收集所有液体块
             const allBlocks = [];
             for (const b of temp) for (const c of b) allBlocks.push(c);
             if (allBlocks.length !== totalBlocks) continue;
 
-            // 4. 每4个一组装回（保证满/空）
             const bottles = [];
             for (let i = 0; i < filled; i++) {
                 bottles.push(allBlocks.slice(i * CAP, (i + 1) * CAP));
             }
             for (let i = 0; i < emptyBottles; i++) bottles.push([]);
 
-            // 5. 质量检查
             if (isWin(bottles)) continue;
             let hasCompleted = false;
             for (const b of bottles) {
@@ -211,11 +397,10 @@
 
             let mixed = 0;
             for (const b of bottles) {
-                if (b.length > 0 && new Set(b).size >= 2) mixed++;
+                if (b.length >0&& new Set(b).size >= 2) mixed++;
             }
             if (mixed < Math.ceil(filled * 0.4)) continue;
 
-            // 6. DFS 验证
             const sol = solve(bottles, 300000);
             if (sol && sol.length >= 2) {
                 if (mixed > bestMix) {
@@ -247,8 +432,8 @@
             '<path d="M 10 20 L 10 117 Q 10 143 28 143 Q 46 143 46 117 L 46 20" fill="url(#gI)"/>' +
             '<ellipse cx="28" cy="20" rx="21" ry="5.5" fill="rgba(60,100,180,0.06)" stroke="url(#gR)" stroke-width="2.2"/>' +
             '<ellipse cx="28" cy="19.5" rx="16" ry="3.5" fill="none" stroke="rgba(200,230,255,0.10)" stroke-width="0.8"/>' +
-            '<path d="M 12.5 25 L 12.5 116 Q 13.5 138 23 143" stroke="rgba(180,220,255,0.35)" stroke-width="3" stroke-linecap="round"/>' +
-            '<path d="M 17 29 L 17 112 Q 18 132 24 138" stroke="rgba(210,240,255,0.10)" stroke-width="1.2" stroke-linecap="round"/>' +
+            '<path d="M 12.5 25 L 12.5 116 Q 13.5 138 23143" stroke="rgba(180,220,255,0.35)" stroke-width="3" stroke-linecap="round"/>' +
+            '<path d="M 1729 L 17 112 Q 18 132 24 138" stroke="rgba(210,240,255,0.10)" stroke-width="1.2" stroke-linecap="round"/>' +
             '<path d="M 43.5 30 L 43.5 110 Q 42.5 130 36 138" stroke="rgba(160,200,255,0.08)" stroke-width="1.5" stroke-linecap="round"/>' +
             '<ellipse cx="28" cy="142" rx="10" ry="2.5" fill="url(#gB)"/>';
         return svg;
@@ -290,7 +475,7 @@
         $.moveCount.textContent = S.moves;
         $.colorInfo.textContent = cfg.colorCount;
         $.bottleInfo.textContent = cfg.totalBottles;
-        $.levelBadge.textContent = '第 ' + S.level + ' 关';
+        $.levelBadge.textContent = '第' + S.level + ' 关';
         $.undoBtn.disabled = !S.history.length;
     }
 
@@ -320,15 +505,23 @@
         S.history.push({ f, t, cnt });
         for (let i = 0; i < cnt; i++) to.push(fr.pop());
         S.moves++; S.sel = null;
+
+        //🔊倒水音效
+        playPourSound();
+
         render(); updateUI();
 
         if (isFull(S.bottles[t])) {
             const ws = $.bottlesContainer.querySelectorAll('.bottle-wrapper');
             if (ws[t]) ws[t].classList.add('just-completed');
+            // 🔊 满瓶音效（延迟一点，在倒水声之后）
+            setTimeout(playCompleteSound, 200);
         }
         setTimeout(() => {
-            S.busy = false;
-            if (isWin(S.bottles)) setTimeout(onWin, 250);
+            S.busy = false;if (isWin(S.bottles)) {
+                // 🔊 通关音效
+                setTimeout(function() { playWinSound(); onWin(); }, 250);
+            }
         }, 350);
     }
 
@@ -373,7 +566,7 @@
         if (S.level >= S.maxLevel) S.maxLevel = Math.min(S.level + 1, TOTAL_LEVELS);
         save();
         const cfg = getLevelConfig(S.level);
-        const base = cfg.totalBottles * 2;
+        const base = cfg.totalBottles *2;
         const stars = S.moves <= base ? 3 : S.moves <= Math.floor(base * 1.8) ? 2 : 1;
         $.winStars.textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
         $.winSubtitle.textContent = '用了 ' + S.moves + ' 步完成';

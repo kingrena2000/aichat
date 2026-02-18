@@ -343,20 +343,61 @@ function deleteMessage(targetIndex) {
     renderChatMessages(chat.messages);
 }
 
-// 编辑消息
+// 编辑消息 — 自定义弹窗 + textarea多行编辑
 function editMessage(targetIndex) {
     if (targetIndex === null || !appData.activeChatId) return;
     const chat = appData.chatObjects.find(c => c.id === appData.activeChatId);
     if (!chat || targetIndex < 0 || targetIndex >= chat.messages.length) return;
-    
-    const oldContent = chat.messages[targetIndex].content;
-    const newContent = prompt('修改消息内容：', oldContent);
-    if (newContent === null || newContent.trim() === '') return;
-    
-    chat.messages[targetIndex].content = newContent.trim();
-    saveDataToStorage();
-    renderChatMessages(chat.messages);
+
+    var modal = document.getElementById('editMessageModal');
+    var textArea = document.getElementById('editMessageText');
+    var saveBtn = document.getElementById('saveEditMessageBtn');
+    var cancelBtn = document.getElementById('cancelEditMessageBtn');
+    var closeBtn = document.getElementById('closeEditMessageModalBtn');
+
+    // 填入原内容
+    textArea.value = chat.messages[targetIndex].content;
+    modal.classList.remove('hidden');
+
+    // 自动聚焦并把光标放到末尾
+    setTimeout(function () {
+        textArea.focus();
+        textArea.selectionStart = textArea.selectionEnd = textArea.value.length;
+    }, 100);
+
+    // 根据内容自动调整高度（最少4行，最多12行）
+    function autoResize() {
+        textArea.style.height = 'auto';
+        var lineHeight = 27; // 约text-sm * 1.8
+        var minH = lineHeight * 4;
+        var maxH = lineHeight * 12;
+        var scrollH = textArea.scrollHeight;
+        textArea.style.height = Math.min(Math.max(scrollH, minH), maxH) + 'px';
+    }
+    autoResize();
+    textArea.addEventListener('input', autoResize);
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        textArea.removeEventListener('input', autoResize);
+        saveBtn.removeEventListener('click', onSave);
+        cancelBtn.removeEventListener('click', closeModal);
+        closeBtn.removeEventListener('click', closeModal);}
+
+    function onSave() {
+        var newContent = textArea.value.trim();
+        if (newContent === '') return;
+        chat.messages[targetIndex].content = newContent;
+        saveDataToStorage();
+        renderChatMessages(chat.messages);
+        closeModal();
+    }
+
+    saveBtn.addEventListener('click', onSave);
+    cancelBtn.addEventListener('click', closeModal);
+    closeBtn.addEventListener('click', closeModal);
 }
+
 
 // 重新发送消息
 async function resendMessage(targetIndex) {
