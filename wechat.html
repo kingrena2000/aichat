@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>微信风格多AI聊天</title>
+    <title>微信风格多AI聊天 (v5.4)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preload" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css"></noscript>
@@ -543,6 +543,23 @@
             </div>
         </div>
     </div>
+	
+    <!--========== 编辑消息模态框 ========== -->
+    <div id="editMessageModal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg w-[90%] max-w-md">
+            <div class="p-4 border-b border-wechat-darkGray flex items-center justify-between">
+                <h2 class="text-lg font-semibold">修改消息</h2>
+                <button id="closeEditMessageModalBtn" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4">
+                <textarea id="editMessageText" class="w-full border border-wechat-darkGray rounded-lg p-3 text-sm focus:input-focus resize-none" rows="6" style="line-height:1.8;word-break:break-all;white-space:pre-wrap;"></textarea>
+            </div>
+            <div class="p-4 border-t border-wechat-darkGray flex justify-end gap-3">
+                <button id="cancelEditMessageBtn" class="bg-wechat-gray text-wechat-text py-2 px-4 rounded-lg text-sm">取消</button>
+                <button id="saveEditMessageBtn" class="bg-wechat-green text-white py-2 px-4 rounded-lg text-sm">保存</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ========== 消息右键菜单 ========== -->
     <div id="messageContextMenu" class="message-context-menu hidden">
@@ -597,6 +614,7 @@
                     <input type="text" id="npcFriendName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="好友名称">
                     <input type="text" id="npcFriendRelation" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="与角色的关系（如：闺蜜、同事）">
                     <input type="text" id="npcFriendPersonality" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="性格特点（如：活泼开朗）">
+                    <input type="text" id="npcFriendUserRelation" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="与用户的关系（如：用户的追求者、好友的妹妹）">					
                     <select id="npcFriendBindChat" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus">
                         <option value="">不绑定（所有人共享）</option>
                     </select>
