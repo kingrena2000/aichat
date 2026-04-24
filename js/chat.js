@@ -1,54 +1,6 @@
 /*=========================================================================微信风格多AI聊天 - 聊天功能模块 (chat.js)
    ========================================================================= */
 
-// 渲染聊天列表
-function renderChatList() {
-    DOM.chatListContainer.innerHTML = '';
-    if (appData.chatObjects.length === 0) {
-        DOM.emptyChatList.classList.remove('hidden');
-        return;
-    }
-    DOM.emptyChatList.classList.add('hidden');
-    
-    [...appData.chatObjects].sort((a, b) => (b.messages.slice(-1)[0]?.timestamp || b.createdAt) - (a.messages.slice(-1)[0]?.timestamp || a.createdAt)).forEach(c => {
-        const iC = document.createElement('div');
-        iC.className = 'chat-item-container relative';
-        const w = document.createElement('div');
-        w.className = 'chat-item-wrapper';
-        const i = document.createElement('div');
-        i.className = 'flex items-center flex-1 p-4 border-b border-wechat-darkGray cursor-pointer';
-        i.dataset.chatId = c.id;
-        const l = c.messages.length > 0 ? c.messages[c.messages.length - 1].content : '暂无消息';
-        
-        i.innerHTML = `<div class="w-12 h-12 rounded-full overflow-hidden mr-3 flex-shrink-0">
-            ${c.avatar && c.avatar.type !== 'default' && c.avatar.url ?`<img src="${escapeHtml(c.avatar.url)}" alt="${escapeHtml(c.name)}" class="w-full h-full object-cover">` : 
-            `<div class="w-full h-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-robot"></i></div>`}
-        </div>
-        <div class="flex-1 min-w-0">
-            <h3 class="font-medium text-wechat-text truncate">${escapeHtml(c.name)}</h3>
-            <p class="text-xs text-wechat-lightText truncate mt-1">${escapeHtml(l.substring(0, 20) + (l.length > 20 ? '...' : ''))}</p>
-        </div>`;
-        
-        const aD = document.createElement('div');
-        aD.className = 'chat-item-actions';
-        aD.innerHTML = `<button class="edit-action-btn" title="编辑" data-chat-id="${c.id}"><i class="fa fa-pencil"></i></button>
-        <button class="delete-action-btn" title="删除" data-chat-id="${c.id}"><i class="fa fa-trash"></i></button>`;
-        
-        const dB = document.createElement('div');
-        dB.className = 'slide-delete-btn';
-        dB.innerHTML = '<i class="fa fa-trash mr-1"></i>移除';
-        
-        w.append(i, dB);
-        iC.append(w, aD);
-        DOM.chatListContainer.appendChild(iC);
-        
-        setupSwipeToDelete(w, c.id);
-        i.addEventListener('click', () => openChat(c.id));
-        aD.querySelector('.edit-action-btn').addEventListener('click', (e) => { e.stopPropagation(); openChatDetail(c.id); });
-        aD.querySelector('.delete-action-btn').addEventListener('click', (e) => { e.stopPropagation(); showConfirmDeleteModal(c.id); });
-    });
-}
-
 // 删除聊天对象
 function deleteChat(chatId) {
     appData.chatObjects = appData.chatObjects.filter(chat => chat.id !== chatId);
@@ -99,42 +51,6 @@ function saveChatDetail() {
     if (typeof renderDiaryList === 'function' && isDiaryPageVisible()) renderDiaryList();
     if (appData.activeChatId === updatedChat.id) openChat(updatedChat.id);DOM.chatDetailPage.classList.add('translate-x-full');
 }
-
-// 打开聊天界面
-function openChat(id) {
-    const c = appData.chatObjects.find(c => c.id === id);
-    if (!c) return;
-    appData.activeChatId = id;
-    saveDataToStorage();
-    DOM.chatPageTitle.textContent = c.name;
-    DOM.chatPageAvatar.innerHTML = c.avatar && c.avatar.type !== 'default' && c.avatar.url ?
-        `<img src="${escapeHtml(c.avatar.url)}" alt="${escapeHtml(c.name)}" class="w-full h-full object-cover">` : 
-        `<div class="w-full h-full rounded-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-robot"></i></div>`;
-    //★ 不再设置静态 typing text，改为动态创建时读取
-    ChatMessageUI.renderChatMessages(c.messages);
-    DOM.chatListPage.classList.add('hidden');
-    DOM.chatPage.classList.remove('hidden');
-    DOM.chatPageMessageInput.value = '';
-    DOM.chatPageMessageInput.style.height = 'auto';
-    setTimeout(() => {
-        if (DOM.chatPageContainer) DOM.chatPageContainer.scrollTop = DOM.chatPageContainer.scrollHeight;
-        if (typeof adjustHeights === 'function') adjustHeights();
-    }, 100);
-}
-
-// 打开聊天详情页
-function openChatDetail(id) {
-    const c = appData.chatObjects.find(c => c.id === id);
-    if (!c) return;
-    appData.editChatTempData = { chatId: id, avatar: { ...c.avatar } };
-    DOM.editChatName.value = c.name;
-    DOM.editChatSystemPrompt.value = c.systemPrompt;
-    updateEditChatAvatarPreview();
-    DOM.editAvatarContainer.classList.add('hidden');
-    DOM.chatDetailPage.classList.remove('translate-x-full');
-}
-
-// 消息渲染由 ChatMessageUI 模块负责
 
 // 发送或重新生成消息
 async function sendOrRegenerate(contextMessages) {
@@ -317,27 +233,6 @@ async function resendMessage(targetIndex) {
     saveDataToStorage();
     ChatMessageUI.renderChatMessages(chat.messages);
     await sendOrRegenerate(chat.messages);
-}
-
-// 滑动删除设置
-function setupSwipeToDelete(w, id) {
-    let s = 0;
-    w.addEventListener('touchstart', (e) => { s = e.touches[0].clientX });
-    w.addEventListener('touchmove', (e) => { w.classList.toggle('swipe-left', s - e.touches[0].clientX > 30) });
-    w.addEventListener('touchend', () => {});
-    w.querySelector('.slide-delete-btn').addEventListener('click', () => showConfirmDeleteModal(id));
-}
-
-// 显示删除确认
-function showConfirmDeleteModal(id) {
-    appData.editChatTempData.chatId = id;
-    DOM.confirmDeleteModal.classList.remove('hidden');
-    document.querySelectorAll('.chat-item-wrapper.swipe-left').forEach(w => w.classList.remove('swipe-left'));
-}
-
-function hideConfirmDeleteModal() {
-    DOM.confirmDeleteModal.classList.add('hidden');
-    appData.editChatTempData.chatId = null;
 }
 
 // 发送消息入口
