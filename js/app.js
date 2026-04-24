@@ -589,6 +589,10 @@ function setupEventListeners() {
 
     const sendMomentCommentBtn = document.getElementById('sendMomentCommentBtn');
     if (sendMomentCommentBtn) sendMomentCommentBtn.addEventListener('click', sendMomentComment);
+
+    // ★ 群聊按钮绑定
+    const createGroupBtn = document.getElementById('createGroupBtn');
+    if (createGroupBtn) createGroupBtn.addEventListener('click', createGroup);
     if (DOM.momentsChatSelector) {
         DOM.momentsChatSelector.addEventListener('change', () => {
             const chatId = DOM.momentsChatSelector.value;
@@ -646,7 +650,47 @@ function setupEventListeners() {
     document.addEventListener('click', (e) => {
         if (!DOM.stickerPanel.contains(e.target) && !DOM.stickerToggleBtn.contains(e.target)) {
             closeStickerPanel();
-        }DOM.messageContextMenu.classList.add('hidden');
+        }
+        DOM.messageContextMenu.classList.add('hidden');
+
+        // ★ 事件委托：处理 moments.js 中动态生成的 data-* 按钮（XSS修复配套）
+        const btn = e.target.closest('[data-action]');
+        if (btn?.dataset.action) {
+            const action = btn.dataset.action;
+            const momentId = btn.dataset.momentId;
+            
+            if (action === 'like' && momentId) {
+                e.stopPropagation();
+                toggleMomentLike(momentId);
+            } else if (action === 'detail' && momentId) {
+                e.stopPropagation();
+                openMomentDetail(momentId);
+            } else if (action === 'toggle-comments' && momentId) {
+                e.stopPropagation();
+                toggleInlineComments(momentId);
+            } else if (action === 'delete-moment') {
+                e.stopPropagation();
+                deleteMoment();
+            } else if (action === 'focus-comment') {
+                e.stopPropagation();
+                if (DOM.momentCommentInput) DOM.momentCommentInput.focus();
+            } else if (action === 'refresh-comments' && momentId) {
+                e.stopPropagation();
+                refreshMomentComments(momentId);
+            } else if (action === 'reply' && momentId) {
+                e.stopPropagation();
+                setReplyTarget(
+                    momentId,
+                    btn.dataset.commentId,
+                    btn.dataset.authorName || '',
+                    btn.dataset.chatId || '',
+                    btn.dataset.npcFriendId || '',
+                    btn.dataset.tempName || '',
+                    btn.dataset.tempRelation || '',
+                    btn.dataset.tempPersonality || ''
+                );
+            }
+        }
     });
 
     window.addEventListener('resize', adjustHeights);

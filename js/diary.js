@@ -134,7 +134,7 @@ async function generateDiaryEntry(chat, messagesToSummarize, startIndex) {
     const userRolePrompt = `以下是最近的对话，写下你的内心备忘：\n\n${messagesToSummarize.map(m => `${m.role === 'user' ? userName : '我'}: ${m.content}`).join('\n')}`;
 
     try {
-        const response = await fetch(`${appData.apiConfig.baseUrl}/chat/completions`, {
+        const data = await fetchWithRetry(`${appData.apiConfig.baseUrl}/chat/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${appData.apiConfig.apiKey}` },
             body: JSON.stringify({
@@ -142,14 +142,8 @@ async function generateDiaryEntry(chat, messagesToSummarize, startIndex) {
                 messages: [{ role: 'system', content: systemRolePrompt }, { role: 'user', content: userRolePrompt }],
                 temperature: appData.apiConfig.temperature
             })
-        });
+        }, 3, 1000);
         
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`AI日记生成API请求失败 (${response.status}): ${errorText}`);
-        }
-        
-        const data = await response.json();
         const diaryContent = cleanAiResponse(data.choices[0].message.content); // Defined in utils.js
         
         if (diaryContent) {

@@ -17,7 +17,8 @@ const aichat_default_config = {
     imageGenInterfaceType: 'chat',
     auxBaseUrl: '',
     auxApiKey: '',
-    auxModelName: '' 
+    auxModelName: '',
+    isGroup: false
 };
 
 // 全局应用数据
@@ -58,7 +59,7 @@ function loadDataFromStorage() {
         })) : [];
         
         const storedConfig = JSON.parse(localStorage.getItem('aiMultiChatApiConfig') || '{}');
-        appData.apiConfig = { ...aichat_default_config, ...storedConfig };
+        appData.apiConfig = { ...aichat_default_config, ...storedConfig, apiKey: deobfuscateApiKey(storedConfig.apiKey), auxApiKey: deobfuscateApiKey(storedConfig.auxApiKey), imageGenApiKey: deobfuscateApiKey(storedConfig.imageGenApiKey) };
         
         const storedUser = localStorage.getItem('aiMultiChatUserInfo');
         appData.userInfo = storedUser ? ({...{ name: 'user', avatar: { type: 'default', url: '' } }, ...JSON.parse(storedUser) }) : { name: 'user', avatar: { type: 'default', url: '' } };
@@ -78,7 +79,8 @@ function loadDataFromStorage() {
 function saveDataToStorage() {
     try {
         localStorage.setItem('aiMultiChatObjects', JSON.stringify(appData.chatObjects));
-        localStorage.setItem('aiMultiChatApiConfig', JSON.stringify(appData.apiConfig));
+        const configToSave = { ...appData.apiConfig, apiKey: obfuscateApiKey(appData.apiConfig.apiKey), auxApiKey: obfuscateApiKey(appData.apiConfig.auxApiKey), imageGenApiKey: obfuscateApiKey(appData.apiConfig.imageGenApiKey) };
+        localStorage.setItem('aiMultiChatApiConfig', JSON.stringify(configToSave));
         localStorage.setItem('aiMultiChatUserInfo', JSON.stringify(appData.userInfo));
         if (appData.activeChatId) {
             localStorage.setItem('aiMultiChatActiveId', appData.activeChatId);

@@ -25,15 +25,19 @@ function formatMessageTimestamp(ts) {
     return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
-// HTML转义，防止XSS
+// HTML转义，防止XSS（不替换换行，换行在渲染时单独处理）
 function escapeHtml(u) {
     return u ? u.replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;")
-                .replace(/\n/g, "<br>") 
              : '';
+}
+
+// 保留换行的HTML转义（用于消息气泡等需要换行的场景）
+function escapeHtmlWithBreaks(u) {
+    return u ? escapeHtml(u).replace(/\n/g, "<br>") : '';
 }
 
 // 清理AI回复中的 <think> 标签（用于深度思考模型）
@@ -41,7 +45,15 @@ function cleanAiResponse(raw) {
     return (raw.replace(/<think>[\s\S]*?<\/think>/g, '').trim()) || "";
 }
 
-// Data URL 转 Blob 对象
+// API Key 混淆存储（防裸读，非加密）
+function obfuscateApiKey(key) {
+    if (!key) return '';
+    try { return btoa(encodeURIComponent(key)); } catch { return key; }
+}
+function deobfuscateApiKey(obf) {
+    if (!obf) return '';
+    try { return decodeURIComponent(atob(obf)); } catch { return obf; }
+}
 function dataURLtoBlob(dataUrl) {
     const arr = dataUrl.split(','),
         mime = arr[0].match(/:(.*?);/)[1],

@@ -123,13 +123,99 @@
     appData.editChatTempData.chatId = null;
   }
 
+  // ==================== 群聊功能 ====================
+
+  // 切换私聊/群聊 Tab
+  function toggleNewChatMode(mode) {
+    const singleSection = document.getElementById('singleChatSection');
+    const groupSection = document.getElementById('groupChatSection');
+    const singleBtn = document.getElementById('newChatModeSingle');
+    const groupBtn = document.getElementById('newChatModeGroup');
+    
+    if (mode === 'single') {
+      singleSection?.classList.remove('hidden');
+      groupSection?.classList.add('hidden');
+      singleBtn?.classList.add('text-wechat-green', 'border-wechat-green');
+      singleBtn?.classList.remove('text-wechat-lightText');
+      groupBtn?.classList.remove('text-wechat-green', 'border-wechat-green');
+      groupBtn?.classList.add('text-wechat-lightText');
+    } else {
+      singleSection?.classList.add('hidden');
+      groupSection?.classList.remove('hidden');
+      groupBtn?.classList.add('text-wechat-green', 'border-wechat-green');
+      groupBtn?.classList.remove('text-wechat-lightText');
+      singleBtn?.classList.remove('text-wechat-green', 'border-wechat-green');
+      singleBtn?.classList.add('text-wechat-lightText');
+      renderGroupMemberList();
+    }
+  }
+
+  // 渲染群聊成员选择列表
+  function renderGroupMemberList() {
+    const container = document.getElementById('groupMemberList');
+    if (!container) return;
+    
+    const availableChats = appData.chatObjects.filter(c => !c.isGroup);
+    
+    if (availableChats.length === 0) {
+      container.innerHTML = '<div class="text-sm text-wechat-lightText py-4 text-center">暂无可用成员，请先创建私聊</div>';
+      return;
+    }
+    
+    container.innerHTML = availableChats.map(chat => 
+      `<div class="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded cursor-pointer" data-action="toggle-member" data-chat-id="${chat.id}">
+        <input type="checkbox" class="group-member-checkbox" data-chat-id="${chat.id}">
+        <div class="flex-1">
+          <div class="text-sm font-medium">${escapeHtml(chat.name)}</div>
+        </div>
+      </div>`
+    ).join('');
+  }
+
+  // 创建群聊
+  function createGroup() {
+    const nameInput = document.getElementById('newGroupName');
+    const name = nameInput?.value.trim();
+    const selectedIds = [...document.querySelectorAll('.group-member-checkbox:checked')].map(cb => cb.dataset.chatId);
+    
+    if (!name) { alert('请输入群名称'); return; }
+    if (selectedIds.length < 2) { alert('至少选择2个成员'); return; }
+    
+    const memberNames = selectedIds.map(id => {
+      const c = appData.chatObjects.find(ch => ch.id === id);
+      return c ? c.name : id;
+    }).join('、');
+    
+    const newGroup = {
+      id: generateUniqueId(),
+      name,
+      isGroup: true,
+      members: selectedIds,
+      avatar: { type: 'default', url: '' },
+      systemPrompt: `你是群聊"${name}"的AI助手。群成员有：${memberNames}。请协调群内对话，必要时代表不同成员发言。`,
+      messages: [],
+      diaries: [],
+      lastDiaryIndex: 0,
+      createdAt: Date.now()
+    };
+    
+    appData.chatObjects.push(newGroup);
+    saveDataToStorage();
+    closeAddChatModal();
+    renderChatList();
+    openChat(newGroup.id);
+  }
+
   global.ChatUI = {
     renderChatList,
     openChat,
     openChatDetail,
     setupSwipeToDelete,
     showConfirmDeleteModal,
-    hideConfirmDeleteModal
+    hideConfirmDeleteModal,
+    toggleNewChatMode,
+    renderGroupMemberList,
+    createGroup
   };
 
   // 兼容现有全局调用，减少改动面
@@ -139,4 +225,7 @@
   global.setupSwipeToDelete = setupSwipeToDelete;
   global.showConfirmDeleteModal = showConfirmDeleteModal;
   global.hideConfirmDeleteModal = hideConfirmDeleteModal;
+  global.toggleNewChatMode = toggleNewChatMode;
+  global.renderGroupMemberList = renderGroupMemberList;
+  global.createGroup = createGroup;
 })(window);

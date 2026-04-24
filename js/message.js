@@ -32,6 +32,9 @@
 
   // 渲染聊天消息
   function renderChatMessages(messages) {
+    const chat = appData.chatObjects.find(c => c.id === appData.activeChatId);
+    const isGroupChat = chat?.isGroup;
+
     DOM.chatPageContainer.innerHTML = messages.length === 0
       ? `<div class="flex flex-col items-center justify-center h-full text-wechat-lightText py-10"><i class="fa fa-comments-o text-4xl mb-3opacity-50"></i><p class="text-sm">发送第一条消息开始对话吧</p></div>`
       : '';
@@ -47,16 +50,21 @@
         ? `<div class="w-8 h-8 rounded-full overflow-hidden ml-3 flex-shrink-0"><img src="${escapeHtml(appData.userInfo.avatar.url)}" class="w-full h-full object-cover"></div>`
         : `<div class="user-avatar-small ml-3"><i class="fa fa-user"></i></div>`;
 
-      const chat = appData.chatObjects.find(c => c.id === appData.activeChatId);
       const aiAvatarHtml = !chat || !chat.avatar || chat.avatar.type === 'default' || !chat.avatar.url
         ? `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-robot"></i></div>`
         : `<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(chat.avatar.url)}" class="w-full h-full object-cover"></div>`;
 
       const parsedContent = parseMessageStickers(g.content);
+      const showSenderName = isGroupChat && g.role === 'assistant' && g.senderName;
 
       e.innerHTML = g.role === 'user'
         ? `<div class="chat-bubble-user"><p class="text-sm">${parsedContent}</p></div>${userAvatarHtml}`
-        : `${aiAvatarHtml}<div class="chat-bubble-ai"><p class="text-sm">${parsedContent}</p></div>`;
+        : `
+          ${aiAvatarHtml}
+          <div class="chat-bubble-ai">
+            ${showSenderName ? `<span class="text-xs text-wechat-lightText mb-1 block">${escapeHtml(g.senderName)}</span>` : ''}
+            <p class="text-sm">${parsedContent}</p>
+          </div>`;
       DOM.chatPageContainer.appendChild(e);
     });
 

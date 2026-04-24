@@ -456,10 +456,16 @@
     <div id="addChatModal" class="fixed inset-0 bg-black/50 z-30 flex items-center justify-center hidden">
         <div class="bg-white rounded-lg w-[90%] max-w-md max-h-[85vh] overflow-y-auto safe-area-bottom">
             <div class="p-4 border-b border-wechat-darkGray flex items-center justify-between sticky top-0 bg-white z-10">
-                <h2 class="text-lg font-semibold">新增聊天对象</h2>
+                <h2 class="text-lg font-semibold">新增聊天</h2>
                 <button id="closeAddChatModalBtn" class="p-2 text-wechat-text"><i class="fa fa-times text-xl"></i></button>
             </div>
-            <div class="p-4 space-y-6 pb-10">
+            <!-- Tab 切换 -->
+            <div class="flex border-b border-wechat-darkGray">
+                <button type="button" id="newChatModeSingle" class="flex-1 py-3 text-center font-medium text-wechat-green border-b-2 border-wechat-green" onclick="toggleNewChatMode('single')">私聊</button>
+                <button type="button" id="newChatModeGroup" class="flex-1 py-3 text-center font-medium text-wechat-lightText" onclick="toggleNewChatMode('group')">群聊</button>
+            </div>
+            <!-- 单聊表单 -->
+            <div id="singleChatSection" class="p-4 space-y-6 pb-10">
                 <div class="space-y-3">
                     <label class="block text-sm font-medium text-wechat-text">聊天对象头像</label>
                     <div class="flex flex-col items-center">
@@ -485,7 +491,16 @@
                 </div>
                 <div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">聊天对象名称</label><input type="text" id="newChatName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如：编程高手" value="AI助手"></div>
                 <div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">人设提示词</label><textarea id="newChatSystemPrompt" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm resize-none focus:input-focus h-32" placeholder="描述AI的角色、性格、说话风格..."></textarea></div>
-                <button type="button" id="createChatBtn" class="w-full bg-wechat-green text-white py-3 rounded-lg font-medium hover:bg-wechat-green/90 transition-colors">创建聊天</button>
+                <button type="button" id="createChatBtn" class="w-full bg-wechat-green text-white py-3 rounded-lg font-medium hover:bg-wechat-green/90 transition-colors">创建私聊</button>
+            </div>
+            <!-- 群聊表单 -->
+            <div id="groupChatSection" class="p-4 space-y-6 pb-10 hidden">
+                <div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">群名称</label><input type="text" id="newGroupName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="例如：摸鱼小分队"></div>
+                <div class="space-y-3">
+                    <label class="block text-sm font-medium text-wechat-text">选择成员（至少2个）</label>
+                    <div id="groupMemberList" class="max-h-48 overflow-y-auto border border-wechat-darkGray rounded-lg p-2 space-y-2"></div>
+                </div>
+                <button type="button" id="createGroupBtn" class="w-full bg-wechat-green text-white py-3 rounded-lg font-medium hover:bg-wechat-green/90 transition-colors">创建群聊</button>
             </div>
         </div>
     </div>

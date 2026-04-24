@@ -597,7 +597,7 @@ async function renderMomentsList() {
 
                     expandHtml = `
                         <div class="moment-comments-expanded" id="commentsExpand_${moment.id}" style="display:none;">${allComments}</div>
-                        <div class="moment-comment-item moment-comments-toggle" id="commentsToggle_${moment.id}" style="color:#576b95;cursor:pointer;" onclick="toggleInlineComments('${moment.id}')">
+                        <div class="moment-comment-item moment-comments-toggle" id="commentsToggle_${moment.id}" style="color:#576b95;cursor:pointer;" data-action="toggle-comments" data-moment-id="${moment.id}">
                             查看全部${moment.comments.length}条评论
                         </div>`;
                 }
@@ -622,10 +622,10 @@ async function renderMomentsList() {
                     <div class="moment-footer">
                         <span class="moment-time">${formatMomentTime(moment.timestamp)}</span>
                         <div class="moment-actions">
-                            <button class="moment-action-btn ${isLiked ? 'liked' : ''}" onclick="toggleMomentLike('${moment.id}')">
+                            <button class="moment-action-btn ${isLiked ? 'liked' : ''}" data-action="like" data-moment-id="${moment.id}">
                                 <i class="fa fa-heart${isLiked ? '' : '-o'}"></i> ${likeCount > 0 ? likeCount : ''}
                             </button>
-                            <button class="moment-action-btn" onclick="openMomentDetail('${moment.id}')">
+                            <button class="moment-action-btn" data-action="detail" data-moment-id="${moment.id}">
                                 <i class="fa fa-comment-o"></i> ${moment.comments ? moment.comments.length : 0}
                             </button>
                         </div>
@@ -769,7 +769,7 @@ async function renderMomentDetail(momentId) {
             const author = getCommentAuthorInfo(c, moment.chatId);
             const parsedComment = typeof parseMessageStickers === 'function' ? parseMessageStickers(c.content) : escapeHtml(c.content);
             const canReply = c.role !== 'user';
-            const clickHandler = canReply ? `onclick="setReplyTarget('${moment.id}','${c.id}','${escapeHtml(author.name)}','${c.chatId || ''}','${c.npcFriendId || ''}','${escapeHtml(c.authorName || '')}','${escapeHtml(c.authorRelation || '')}','${escapeHtml(c.authorPersonality || '')}')"` : '';
+            const clickHandler = canReply ? `data-action="reply" data-moment-id="${moment.id}" data-comment-id="${c.id}" data-author-name="${escapeHtml(author.name)}" data-chat-id="${c.chatId || ''}" data-npc-friend-id="${c.npcFriendId || ''}" data-temp-name="${escapeHtml(c.authorName || '')}" data-temp-relation="${escapeHtml(c.authorRelation || '')}" data-temp-personality="${escapeHtml(c.authorPersonality || '')}"` : '';
             const nameClass = canReply ? 'moment-comment-name' : 'moment-comment-name no-click';
 
             let replyTag = '';
@@ -794,7 +794,7 @@ async function renderMomentDetail(momentId) {
 
     // 删除按钮：只有用户自己发的可删
     const deleteBtn = moment.chatId === '__user__'
-        ? `<button class="moment-detail-action-btn" onclick="deleteMoment()" style="color:#f43530;"><i class="fa fa-trash-o"></i><span>删除</span></button>`
+        ? `<button class="moment-detail-action-btn" data-action="delete-moment" style="color:#f43530;"><i class="fa fa-trash-o"></i><span>删除</span></button>`
         : '';
 
     DOM.momentDetailContent.innerHTML = `
@@ -811,11 +811,11 @@ async function renderMomentDetail(momentId) {
                 ${imagesHtml}
             </div>
             <div class="moment-detail-actions">
-                <button class="moment-detail-action-btn ${isLiked ? 'liked' : ''}" onclick="toggleMomentLike('${moment.id}')">
+                <button class="moment-detail-action-btn ${isLiked ? 'liked' : ''}" data-action="like" data-moment-id="${moment.id}">
                     <i class="fa fa-heart${isLiked ? '' : '-o'}"></i>
                     <span>${likeCount > 0 ? likeCount + ' 赞' : '点赞'}</span>
                 </button>
-                <button class="moment-detail-action-btn" onclick="DOM.momentCommentInput.focus()">
+                <button class="moment-detail-action-btn" data-action="focus-comment">
                     <i class="fa fa-comment-o"></i>
                     <span>${moment.comments ? moment.comments.length + ' 评论' : '评论'}</span>
                 </button>
@@ -826,7 +826,7 @@ async function renderMomentDetail(momentId) {
             <div class="moment-comments-title">评论</div>
             ${commentsHtml}
             <div style="text-align:center;padding:12px 0;">
-                <button id="refreshCommentsBtn" onclick="refreshMomentComments('${moment.id}')" 
+                <button id="refreshCommentsBtn" data-action="refresh-comments" data-moment-id="${moment.id}" 
                     style="color:#576b95;font-size:13px;background:none;border:none;cursor:pointer;padding:8px 16px;">
                     <i class="fa fa-refresh" style="margin-right:4px;"></i>邀请好友评论
                 </button>
