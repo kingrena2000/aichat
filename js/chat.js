@@ -1,35 +1,6 @@
 /*=========================================================================微信风格多AI聊天 - 聊天功能模块 (chat.js)
    ========================================================================= */
 
-// ★ 动态显示打字指示器（注入到聊天内容区底部，像一条真实消息）
-function showTypingIndicator() {
-    hideTypingIndicator(); // 先清除已有的
-    const chat = appData.chatObjects.find(c => c.id === appData.activeChatId);
-    if (!chat) return;
-
-    // 构建与AI消息一致的头像HTML
-    const avatarHtml = (chat.avatar && chat.avatar.type !== 'default' && chat.avatar.url)
-        ? `<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(chat.avatar.url)}" class="w-full h-full object-cover"></div>`
-        : `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-robot"></i></div>`;
-
-    const el = document.createElement('div');
-    el.id = 'typingBubble';
-    el.className = 'flex items-start mb-6';
-    el.innerHTML = `${avatarHtml}<div class="chat-bubble-ai"><p class="text-sm text-wechat-lightText">${escapeHtml(chat.name)}正在输入<span class="typing-dot-anim"><span></span><span></span><span></span></span></p></div>`;
-
-    DOM.chatPageContainer.appendChild(el);
-    //滚动到底部，确保用户看到
-    setTimeout(() => {
-        if (DOM.chatPageContainer) DOM.chatPageContainer.scrollTop = DOM.chatPageContainer.scrollHeight;
-    }, 50);
-}
-
-// ★ 移除打字指示器
-function hideTypingIndicator() {
-    const el = document.getElementById('typingBubble');
-    if (el) el.remove();
-}
-
 // 渲染聊天列表
 function renderChatList() {
     DOM.chatListContainer.innerHTML = '';
@@ -140,7 +111,7 @@ function openChat(id) {
         `<img src="${escapeHtml(c.avatar.url)}" alt="${escapeHtml(c.name)}" class="w-full h-full object-cover">` : 
         `<div class="w-full h-full rounded-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-robot"></i></div>`;
     //★ 不再设置静态 typing text，改为动态创建时读取
-    renderChatMessages(c.messages);
+    ChatMessageUI.renderChatMessages(c.messages);
     DOM.chatListPage.classList.add('hidden');
     DOM.chatPage.classList.remove('hidden');
     DOM.chatPageMessageInput.value = '';
@@ -163,37 +134,7 @@ function openChatDetail(id) {
     DOM.chatDetailPage.classList.remove('translate-x-full');
 }
 
-// 渲染聊天消息
-function renderChatMessages(m) {
-    DOM.chatPageContainer.innerHTML = m.length === 0 ? 
-        `<div class="flex flex-col items-center justify-center h-full text-wechat-lightText py-10"><i class="fa fa-comments-o text-4xl mb-3opacity-50"></i><p class="text-sm">发送第一条消息开始对话吧</p></div>` : '';
-    if (m.length === 0) return;
-    
-    m.forEach((g, x) => {
-        const e = document.createElement('div');
-        e.className = `flex items-start mb-6 ${g.role === 'user' ? 'justify-end' : ''}`;
-        e.dataset.messageRole = g.role;
-        e.dataset.messageIndex = x;
-        
-        const uA = appData.userInfo.avatar && appData.userInfo.avatar.type !== 'default' && appData.userInfo.avatar.url ?
-            `<div class="w-8 h-8 rounded-full overflow-hidden ml-3 flex-shrink-0"><img src="${escapeHtml(appData.userInfo.avatar.url)}" class="w-full h-full object-cover"></div>` :
-            `<div class="user-avatar-small ml-3"><i class="fa fa-user"></i></div>`;
-            
-        const c = appData.chatObjects.find(c => c.id === appData.activeChatId);
-        const aA = !c || !c.avatar || c.avatar.type === 'default' || !c.avatar.url ?
-            `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-robot"></i></div>` :
-            `<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(c.avatar.url)}" class="w-full h-full object-cover"></div>`;
-        
-        const parsedContent = parseMessageStickers(g.content);
-        
-        e.innerHTML = g.role === 'user' ?
-            `<div class="chat-bubble-user"><p class="text-sm">${parsedContent}</p></div>${uA}` :
-            `${aA}<div class="chat-bubble-ai"><p class="text-sm">${parsedContent}</p></div>`;
-        DOM.chatPageContainer.appendChild(e);
-    });
-    
-    setTimeout(() => { if (DOM.chatPageContainer) DOM.chatPageContainer.scrollTop = DOM.chatPageContainer.scrollHeight }, 100);
-}
+// 消息渲染由 ChatMessageUI 模块负责
 
 // 发送或重新生成消息
 async function sendOrRegenerate(contextMessages) {
@@ -203,7 +144,7 @@ async function sendOrRegenerate(contextMessages) {
     if (!appData.apiConfig.apiKey) { alert('请先在设置中填写API Key'); togglePage('settings', true); return; }
 
     //★ 改用动态注入的打字指示器
-    showTypingIndicator();
+    ChatMessageUI.showTypingIndicator();
     try {
         const userName = appData.userInfo.name.trim() || 'user';
 
@@ -243,7 +184,7 @@ async function sendOrRegenerate(contextMessages) {
         
         saveDataToStorage();
         // ★ renderChatMessages 会清空容器，typing bubble 也会被清除
-        renderChatMessages(chat.messages);
+        ChatMessageUI.renderChatMessages(chat.messages);
         
         if (typeof checkAndTriggerDiaryGeneration === 'function') {
             checkAndTriggerDiaryGeneration(chat);
@@ -256,13 +197,13 @@ async function sendOrRegenerate(contextMessages) {
                 timestamp: Date.now()
             });
             saveDataToStorage();
-            renderChatMessages(chat.messages);
+            ChatMessageUI.renderChatMessages(chat.messages);
         } else {
             alert(`出错了：${e.message}`);
         }
     } finally {
         // ★ 兜底清除（renderChatMessages已经清了，这里做保险）
-        hideTypingIndicator();
+        ChatMessageUI.hideTypingIndicator();
     }
 }
 
@@ -282,7 +223,7 @@ async function regenerateAiResponse(targetIndex) {
     
     const contextForApi = chat.messages.slice(0, turnStartIndex);
     chat.messages.length = turnStartIndex;
-    renderChatMessages(chat.messages);
+    ChatMessageUI.renderChatMessages(chat.messages);
     await sendOrRegenerate(contextForApi);
 }
 
@@ -307,7 +248,7 @@ function deleteMessage(targetIndex) {
     }
     
     saveDataToStorage();
-    renderChatMessages(chat.messages);
+    ChatMessageUI.renderChatMessages(chat.messages);
 }
 
 // 编辑消息 — 自定义弹窗 + textarea多行编辑
@@ -356,7 +297,7 @@ function editMessage(targetIndex) {
         if (newContent === '') return;
         chat.messages[targetIndex].content = newContent;
         saveDataToStorage();
-        renderChatMessages(chat.messages);
+        ChatMessageUI.renderChatMessages(chat.messages);
         closeModal();
     }
 
@@ -374,7 +315,7 @@ async function resendMessage(targetIndex) {
     
     chat.messages.length = targetIndex + 1;
     saveDataToStorage();
-    renderChatMessages(chat.messages);
+    ChatMessageUI.renderChatMessages(chat.messages);
     await sendOrRegenerate(chat.messages);
 }
 
@@ -409,7 +350,7 @@ async function sendChatMessage() {
     const chat = appData.chatObjects[i];
     chat.messages.push({ role: 'user', content: t, timestamp: Date.now() });
     saveDataToStorage();
-    renderChatMessages(chat.messages);
+    ChatMessageUI.renderChatMessages(chat.messages);
     
     closeStickerPanel();
     DOM.chatPageMessageInput.value = '';
