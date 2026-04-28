@@ -84,6 +84,11 @@ async function sendOrRegenerate(contextMessages) {
 
         // 群聊：每个成员各自回复（不再使用“群助手”单一回复）
         if (chat.isGroup && Array.isArray(chat.members) && chat.members.length > 0) {
+            // 全员禁言：群成员不响应（防止AI循环对话）
+            if (chat.muted) {
+                return;
+            }
+
             const memberChats = chat.members
                 .map(id => appData.chatObjects.find(c => c.id === id && !c.isGroup))
                 .filter(Boolean);

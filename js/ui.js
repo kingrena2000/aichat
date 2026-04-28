@@ -140,6 +140,11 @@
       singlePromptSection?.classList.add('hidden');
       groupMembersSection?.classList.remove('hidden');
       dissolveGroupBtn?.classList.remove('hidden');
+      const toggleGroupMuteBtn = document.getElementById('toggleGroupMuteBtn');
+      toggleGroupMuteBtn?.classList.remove('hidden');
+      if (toggleGroupMuteBtn) {
+        toggleGroupMuteBtn.textContent = c.muted ? '关闭全员禁言' : '开启全员禁言';
+      }
 
       const memberSet = new Set(c.members || []);
       const availableChats = appData.chatObjects.filter(ch => !ch.isGroup);
@@ -161,6 +166,8 @@
       singlePromptSection?.classList.remove('hidden');
       groupMembersSection?.classList.add('hidden');
       dissolveGroupBtn?.classList.add('hidden');
+      const toggleGroupMuteBtn = document.getElementById('toggleGroupMuteBtn');
+      toggleGroupMuteBtn?.classList.add('hidden');
     }
 
     DOM.chatDetailPage.classList.remove('translate-x-full');
@@ -259,6 +266,7 @@
       name,
       isGroup: true,
       members: selectedIds,
+      muted: false,
       avatar: { type: 'default', url: '' },
       systemPrompt: `你是群聊"${name}"的AI助手。群成员有：${memberNames}。请协调群内对话，必要时代表不同成员发言。`,
       messages: [],
@@ -315,5 +323,20 @@
     saveDataToStorage();
     renderChatList();
     DOM.chatDetailPage.classList.add('translate-x-full');
+  };
+
+  global.toggleGroupMute = function toggleGroupMute() {
+    const id = appData.editChatTempData?.chatId;
+    if (!id) return;
+    const idx = appData.chatObjects.findIndex(chat => chat.id === id);
+    if (idx < 0) return;
+    const c = appData.chatObjects[idx];
+    if (!c.isGroup) return;
+
+    c.muted = !c.muted;
+    saveDataToStorage();
+
+    const btn = document.getElementById('toggleGroupMuteBtn');
+    if (btn) btn.textContent = c.muted ? '关闭全员禁言' : '开启全员禁言';
   };
 })(window);
