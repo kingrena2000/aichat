@@ -601,8 +601,8 @@ function setupEventListeners() {
         });
     }
     
-    // 通用模态框关闭
-    [DOM.addChatModal, DOM.confirmDeleteModal, DOM.restoreModal, DOM.editDiaryEntryModal, DOM.logModal, DOM.addStickerModal, DOM.publishMomentModal, DOM.npcFriendsModal, DOM.aiSuggestFriendsModal].forEach(el => el && el.addEventListener('click', e => {
+    // 通用模态框关闭（新增聊天弹窗仅允许点 X 关闭，避免误触空白关闭）
+    [DOM.confirmDeleteModal, DOM.restoreModal, DOM.editDiaryEntryModal, DOM.logModal, DOM.addStickerModal, DOM.publishMomentModal, DOM.npcFriendsModal, DOM.aiSuggestFriendsModal].forEach(el => el && el.addEventListener('click', e => {
         if (e.target === el) el.classList.add('hidden')
     }));
 
