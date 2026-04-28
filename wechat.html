@@ -539,8 +539,13 @@
                     <button type="button" class="w-full max-w-xs mx-auto bg-wechat-gray text-wechat-text py-2 rounded-lg text-sm" id="cancelEditAvatarBtn">取消更换</button>
                 </div>
                 <div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">聊天对象名称</label><input type="text" id="editChatName" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm focus:input-focus" placeholder="输入聊天对象的名称"></div>
-                <div class="space-y-3"><label class="block text-sm font-medium text-wechat-text">人设提示词</label><textarea id="editChatSystemPrompt" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm resize-none focus:input-focus h-32" placeholder="描述AI的角色、性格、说话风格..."></textarea></div>
+                <div id="singlePromptSection" class="space-y-3"><label class="block text-sm font-medium text-wechat-text">人设提示词</label><textarea id="editChatSystemPrompt" class="w-full border border-wechat-darkGray rounded-lg px-3 py-2 text-sm resize-none focus:input-focus h-32" placeholder="描述AI的角色、性格、说话风格..."></textarea></div>
+                <div id="groupMembersSection" class="space-y-3 hidden">
+                    <label class="block text-sm font-medium text-wechat-text">群成员（至少2个）</label>
+                    <div id="editGroupMemberList" class="max-h-56 overflow-y-auto border border-wechat-darkGray rounded-lg p-2 space-y-2"></div>
+                </div>
                 <button type="button" id="saveChatDetailBtn" class="w-full bg-wechat-green text-white py-3 rounded-lg font-medium hover:bg-wechat-green/90 transition-colors">保存修改</button>
+                <button type="button" id="dissolveGroupBtn" class="w-full bg-wechat-red text-white py-3 rounded-lg font-medium hover:bg-wechat-red/90 transition-colors hidden">解散群聊</button>
             </div>
         </div>
     </div>

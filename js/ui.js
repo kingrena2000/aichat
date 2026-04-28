@@ -95,6 +95,40 @@
     DOM.editChatSystemPrompt.value = c.systemPrompt;
     updateEditChatAvatarPreview();
     DOM.editAvatarContainer.classList.add('hidden');
+
+    // 群聊详情：展示成员列表；私聊详情：展示人设
+    const singlePromptSection = document.getElementById('singlePromptSection');
+    const groupMembersSection = document.getElementById('groupMembersSection');
+    const dissolveGroupBtn = document.getElementById('dissolveGroupBtn');
+    const editGroupMemberList = document.getElementById('editGroupMemberList');
+
+    if (c.isGroup) {
+      singlePromptSection?.classList.add('hidden');
+      groupMembersSection?.classList.remove('hidden');
+      dissolveGroupBtn?.classList.remove('hidden');
+
+      const memberSet = new Set(c.members || []);
+      const availableChats = appData.chatObjects.filter(ch => !ch.isGroup);
+      if (editGroupMemberList) {
+        if (availableChats.length === 0) {
+          editGroupMemberList.innerHTML = '<div class="text-sm text-wechat-lightText py-4 text-center">暂无可用成员，请先创建私聊</div>';
+        } else {
+          editGroupMemberList.innerHTML = availableChats.map(chat => `
+            <label class="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded cursor-pointer">
+              <input type="checkbox" class="edit-group-member-checkbox" data-chat-id="${chat.id}" ${memberSet.has(chat.id) ? 'checked' : ''}>
+              <div class="flex-1">
+                <div class="text-sm font-medium">${escapeHtml(chat.name)}</div>
+              </div>
+            </label>
+          `).join('');
+        }
+      }
+    } else {
+      singlePromptSection?.classList.remove('hidden');
+      groupMembersSection?.classList.add('hidden');
+      dissolveGroupBtn?.classList.add('hidden');
+    }
+
     DOM.chatDetailPage.classList.remove('translate-x-full');
   }
 
@@ -228,4 +262,24 @@
   global.toggleNewChatMode = toggleNewChatMode;
   global.renderGroupMemberList = renderGroupMemberList;
   global.createGroup = createGroup;
+
+  // 群聊解散
+  global.dissolveGroup = function dissolveGroup() {
+    const id = appData.editChatTempData?.chatId;
+    if (!id) return;
+    const c = appData.chatObjects.find(chat => chat.id === id);
+    if (!c || !c.isGroup) return;
+    if (!confirm(`确定要解散群聊「${c.name}」吗？`)) return;
+
+    appData.chatObjects = appData.chatObjects.filter(chat => chat.id !== id);
+    if (appData.activeChatId === id) {
+      appData.activeChatId = null;
+      localStorage.removeItem('aiMultiChatActiveId');
+      DOM.chatPage.classList.add('hidden');
+      DOM.chatListPage.classList.remove('hidden');
+    }
+    saveDataToStorage();
+    renderChatList();
+    DOM.chatDetailPage.classList.add('translate-x-full');
+  };
 })(window);

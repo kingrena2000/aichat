@@ -39,12 +39,30 @@ function createNewChat() {
 function saveChatDetail() {
     const chatIndex = appData.chatObjects.findIndex(c => c.id === appData.editChatTempData.chatId);
     if (chatIndex === -1) return;
-    const updatedChat = {
-        ...appData.chatObjects[chatIndex],
-        name: DOM.editChatName.value.trim() || 'AI助手',
-        systemPrompt: DOM.editChatSystemPrompt.value.trim() || '你是一个友好、helpful 的AI助手。',
-        avatar: { ...appData.editChatTempData.avatar }
-    };
+
+    const originalChat = appData.chatObjects[chatIndex];
+    const isGroup = !!originalChat.isGroup;
+
+    let updatedChat;
+    if (isGroup) {
+        const selectedIds = [...document.querySelectorAll('.edit-group-member-checkbox:checked')].map(cb => cb.dataset.chatId);
+        if (selectedIds.length < 2) { alert('群聊至少保留2个成员'); return; }
+
+        updatedChat = {
+            ...originalChat,
+            name: DOM.editChatName.value.trim() || '群聊',
+            members: selectedIds,
+            avatar: { ...appData.editChatTempData.avatar }
+        };
+    } else {
+        updatedChat = {
+            ...originalChat,
+            name: DOM.editChatName.value.trim() || 'AI助手',
+            systemPrompt: DOM.editChatSystemPrompt.value.trim() || '你是一个友好、helpful 的AI助手。',
+            avatar: { ...appData.editChatTempData.avatar }
+        };
+    }
+
     appData.chatObjects[chatIndex] = updatedChat;
     saveDataToStorage();
     renderChatList();
