@@ -64,6 +64,85 @@ async function sendOrRegenerate(contextMessages) {
     try {
         const userName = appData.userInfo.name.trim() || 'user';
 
+        // 群聊：每个成员各自回复（不再使用“群助手”单一回复）
+        if (chat.isGroup && Array.isArray(chat.members) && chat.members.length > 0) {
+            const memberChats = chat.members
+                .map(id => appData.chatObjects.find(c => c.id === id && !c.isGroup))
+                .filter(Boolean);
+
+            if (memberChats.length === 0) {
+                chat.messages.push({ role: 'assistant', content: '这个群还没有可用成员，请先添加成员。', timestamp: Date.now() });
+                saveDataToStorage();
+                ChatMessageUI.renderChatMessages(chat.messages);
+                return;
+            }
+
+            // 把群消息上下文转换成“谁说了什么”，让每个成员按自己身份理解对话
+            const groupContextMessages = (contextMessages || []).map(m => {
+                if (m.role === 'assistant') {
+                    const speaker = m.senderName || '群成员';
+                    return { role: 'assistant', content: `${speaker}：${m.content}` };
+                }
+                return m;
+            });
+
+            for (const member of memberChats) {
+                const memberChatView = { ...chat, systemPrompt: member.systemPrompt || `你是${member.name}` };
+                const apiPayload = ChatApi.buildChatCompletionPayload({
+                    appData,
+                    chat: memberChatView,
+                    contextMessages: groupContextMessages,
+                    nowText: formatMessageTimestamp(Date.now()),
+                    userName
+                });
+
+                const rawContent = await ChatApi.requestChatCompletion({ appData, payload: apiPayload });
+                const cleanedContent = cleanAiResponse(rawContent);
+
+                const stickerPattern = /:([^:\s]+):/g;
+                const allStickers = cleanedContent.match(stickerPattern) || [];
+                const lastSticker = allStickers.length > 0 ? allStickers[allStickers.length - 1] : null;
+                const validSticker = lastSticker && appData.stickers.find(s => `:${s.name}:` === lastSticker) ? lastSticker : null;
+
+                let textContent = cleanedContent.replace(stickerPattern, '').trim();
+                const firstNewlineIndex = textContent.indexOf('\n');
+                let messageParts = (firstNewlineIndex === -1)
+                    ? [textContent]
+                    : [textContent.substring(0, firstNewlineIndex), textContent.substring(firstNewlineIndex + 1)];
+
+                const finalMessages = messageParts.map(p => p.trim()).filter(p => p !== '');
+                if (validSticker) finalMessages.push(validSticker);
+
+                if (finalMessages.length > 0) {
+                    finalMessages.forEach(part => {
+                        chat.messages.push({
+                            role: 'assistant',
+                            senderName: member.name,
+                            senderId: member.id,
+                            content: part,
+                            timestamp: Date.now()
+                        });
+                    });
+                } else {
+                    chat.messages.push({
+                        role: 'assistant',
+                        senderName: member.name,
+                        senderId: member.id,
+                        content: '... ',
+                        timestamp: Date.now()
+                    });
+                }
+            }
+
+            saveDataToStorage();
+            ChatMessageUI.renderChatMessages(chat.messages);
+
+            if (typeof checkAndTriggerDiaryGeneration === 'function') {
+                checkAndTriggerDiaryGeneration(chat);
+            }
+            return;
+        }
+
         const apiPayload = ChatApi.buildChatCompletionPayload({
             appData,
             chat,
