@@ -9,9 +9,14 @@
     const chat = appData.chatObjects.find(c => c.id === appData.activeChatId);
     if (!chat) return;
 
-    const avatarHtml = (chat.avatar && chat.avatar.type !== 'default' && chat.avatar.url)
-      ? `<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(chat.avatar.url)}" class="w-full h-full object-cover"></div>`
-      : `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-robot"></i></div>`;
+    const avatarHtml = (() => {
+      if (chat.isGroup) {
+        return `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-users"></i></div>`;
+      }
+      return (chat.avatar && chat.avatar.type !== 'default' && chat.avatar.url)
+        ? `<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(chat.avatar.url)}" class="w-full h-full object-cover"></div>`
+        : `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-robot"></i></div>`;
+    })();
 
     const el = document.createElement('div');
     el.id = 'typingBubble';
@@ -50,9 +55,21 @@
         ? `<div class="w-8 h-8 rounded-full overflow-hidden ml-3 flex-shrink-0"><img src="${escapeHtml(appData.userInfo.avatar.url)}" class="w-full h-full object-cover"></div>`
         : `<div class="user-avatar-small ml-3"><i class="fa fa-user"></i></div>`;
 
-      const aiAvatarHtml = !chat || !chat.avatar || chat.avatar.type === 'default' || !chat.avatar.url
-        ? `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-robot"></i></div>`
-        : `<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(chat.avatar.url)}" class="w-full h-full object-cover"></div>`;
+      const aiAvatarHtml = (() => {
+        if (isGroupChat && g.senderId) {
+          const sender = appData.chatObjects.find(c => c.id === g.senderId && !c.isGroup);
+          if (sender && sender.avatar && sender.avatar.type !== 'default' && sender.avatar.url) {
+            return `<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(sender.avatar.url)}" class="w-full h-full object-cover"></div>`;
+          }
+          return `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-user"></i></div>`;
+        }
+        if (isGroupChat) {
+          return `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-users"></i></div>`;
+        }
+        return (!chat || !chat.avatar || chat.avatar.type === 'default' || !chat.avatar.url)
+          ? `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-robot"></i></div>`
+          : `<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(chat.avatar.url)}" class="w-full h-full object-cover"></div>`;
+      })();
 
       const parsedContent = parseMessageStickers(g.content);
       const showSenderName = isGroupChat && g.role === 'assistant' && g.senderName;

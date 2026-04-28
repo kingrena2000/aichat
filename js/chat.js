@@ -105,7 +105,18 @@ async function sendOrRegenerate(contextMessages) {
             });
 
             for (const member of memberChats) {
-                const memberChatView = { ...chat, systemPrompt: member.systemPrompt || `你是${member.name}` };
+                const memberChatView = {
+                    ...chat,
+                    systemPrompt: `${member.systemPrompt || `你是${member.name}`}
+
+【群聊发言规则】
+- 你正在一个多人群聊中，不是“群助手”。
+- 你只代表“${member.name}”这个成员发言。
+- 先判断这句话是否值得你回应：
+  - 如果你没有必要发言，请只输出：[沉默]
+  - 如果需要发言，再自然回复一句。
+- 不要代替其他成员发言，不要写“群助手”。`
+                };
                 const apiPayload = ChatApi.buildChatCompletionPayload({
                     appData,
                     chat: memberChatView,
@@ -116,6 +127,12 @@ async function sendOrRegenerate(contextMessages) {
 
                 const rawContent = await ChatApi.requestChatCompletion({ appData, payload: apiPayload });
                 const cleanedContent = cleanAiResponse(rawContent);
+
+                const normalized = (cleanedContent || '').trim();
+                const silentSignals = ['[沉默]', '（沉默）', '(沉默)', '不发言', '保持沉默', 'PASS', 'pass'];
+                if (!normalized || silentSignals.some(s => normalized === s || normalized.includes(s))) {
+                    continue; // 该成员选择不发言
+                }
 
                 const stickerPattern = /:([^:\s]+):/g;
                 const allStickers = cleanedContent.match(stickerPattern) || [];
@@ -140,14 +157,6 @@ async function sendOrRegenerate(contextMessages) {
                             content: part,
                             timestamp: Date.now()
                         });
-                    });
-                } else {
-                    chat.messages.push({
-                        role: 'assistant',
-                        senderName: member.name,
-                        senderId: member.id,
-                        content: '... ',
-                        timestamp: Date.now()
                     });
                 }
             }

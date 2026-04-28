@@ -12,6 +12,23 @@
     }
     DOM.emptyChatList.classList.add('hidden');
 
+    const getGroupAvatarHtml = (groupChat) => {
+      const members = (groupChat.members || [])
+        .map(id => appData.chatObjects.find(c => c.id === id && !c.isGroup))
+        .filter(Boolean)
+        .slice(0, 4);
+      if (members.length === 0) {
+        return `<div class="w-full h-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-users"></i></div>`;
+      }
+      const cellClass = members.length === 2 ? 'w-1/2 h-full' : 'w-1/2 h-1/2';
+      return `<div class="w-full h-full grid ${members.length === 2 ? 'grid-cols-2 grid-rows-1' : 'grid-cols-2 grid-rows-2'} gap-[1px] bg-white">${members.map(m => {
+        if (m.avatar && m.avatar.type !== 'default' && m.avatar.url) {
+          return `<div class="${cellClass} overflow-hidden"><img src="${escapeHtml(m.avatar.url)}" class="w-full h-full object-cover"></div>`;
+        }
+        return `<div class="${cellClass} bg-wechat-green text-white flex items-center justify-center text-xs"><i class="fa fa-user"></i></div>`;
+      }).join('')}</div>`;
+    };
+
     [...appData.chatObjects]
       .sort((a, b) => (b.messages.slice(-1)[0]?.timestamp || b.createdAt) - (a.messages.slice(-1)[0]?.timestamp || a.createdAt))
       .forEach(c => {
@@ -28,9 +45,11 @@
         const last = c.messages.length > 0 ? c.messages[c.messages.length - 1].content : '暂无消息';
 
         item.innerHTML = `<div class="w-12 h-12 rounded-full overflow-hidden mr-3 flex-shrink-0">
-            ${c.avatar && c.avatar.type !== 'default' && c.avatar.url
-              ? `<img src="${escapeHtml(c.avatar.url)}" alt="${escapeHtml(c.name)}" class="w-full h-full object-cover">`
-              : `<div class="w-full h-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-robot"></i></div>`}
+            ${c.isGroup
+              ? getGroupAvatarHtml(c)
+              : (c.avatar && c.avatar.type !== 'default' && c.avatar.url
+                ? `<img src="${escapeHtml(c.avatar.url)}" alt="${escapeHtml(c.name)}" class="w-full h-full object-cover">`
+                : `<div class="w-full h-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-robot"></i></div>`)}
         </div>
         <div class="flex-1 min-w-0">
             <h3 class="font-medium text-wechat-text truncate">${escapeHtml(c.name)}</h3>
@@ -70,10 +89,25 @@
     appData.activeChatId = id;
     saveDataToStorage();
 
+    const getGroupAvatarHtml = (groupChat) => {
+      const members = (groupChat.members || [])
+        .map(mid => appData.chatObjects.find(mc => mc.id === mid && !mc.isGroup))
+        .filter(Boolean)
+        .slice(0, 4);
+      if (members.length === 0) {
+        return `<div class="w-full h-full rounded-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-users"></i></div>`;
+      }
+      return `<div class="w-full h-full rounded-full overflow-hidden grid ${members.length === 2 ? 'grid-cols-2 grid-rows-1' : 'grid-cols-2 grid-rows-2'} gap-[1px] bg-white">${members.map(m => (m.avatar && m.avatar.type !== 'default' && m.avatar.url)
+        ? `<img src="${escapeHtml(m.avatar.url)}" class="w-full h-full object-cover">`
+        : `<div class="bg-wechat-green text-white flex items-center justify-center text-xs"><i class="fa fa-user"></i></div>`).join('')}</div>`;
+    };
+
     DOM.chatPageTitle.textContent = c.name;
-    DOM.chatPageAvatar.innerHTML = c.avatar && c.avatar.type !== 'default' && c.avatar.url
-      ? `<img src="${escapeHtml(c.avatar.url)}" alt="${escapeHtml(c.name)}" class="w-full h-full object-cover">`
-      : `<div class="w-full h-full rounded-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-robot"></i></div>`;
+    DOM.chatPageAvatar.innerHTML = c.isGroup
+      ? getGroupAvatarHtml(c)
+      : (c.avatar && c.avatar.type !== 'default' && c.avatar.url
+        ? `<img src="${escapeHtml(c.avatar.url)}" alt="${escapeHtml(c.name)}" class="w-full h-full object-cover">`
+        : `<div class="w-full h-full rounded-full bg-wechat-green flex items-center justify-center text-white"><i class="fa fa-robot"></i></div>`);
 
     ChatMessageUI.renderChatMessages(c.messages);
     DOM.chatListPage.classList.add('hidden');
