@@ -604,8 +604,13 @@ document.getElementById('backupBtn').addEventListener('click', backupZipData);
 document.getElementById('restoreFileInput').addEventListener('change', handleExternalRestoreFile);
 
 document.getElementById('viewLogsBtn').addEventListener('click', () => {
-    const logs = localStorage.getItem('wechat_ai_logs');
-    if (!logs) { toast('暂无日志'); return; }
+    const keys = ['wechat_ai_logs', 'aiMultiChatLogs', 'ai_multi_chat_logs'];
+    const logs = keys.map(k => localStorage.getItem(k)).filter(Boolean).join('\n');
+    if (!logs) {
+        const allKeys = Object.keys(localStorage).filter(k => /log/i.test(k));
+        toast(allKeys.length ? `暂无日志，发现日志Key：${allKeys.join(', ')}` : '暂无日志');
+        return;
+    }
     const w = window.open('', '_blank');
     if (!w) { toast('无法打开日志窗口，请检查浏览器拦截'); return; }
     w.document.write(`<pre style="white-space:pre-wrap;word-break:break-word;padding:16px;font-family:ui-monospace,monospace;">${String(logs).replace(/[&<>]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[s]))}</pre>`);
@@ -614,7 +619,7 @@ document.getElementById('viewLogsBtn').addEventListener('click', () => {
 
 document.getElementById('clearLogsBtn').addEventListener('click', () => {
     if (confirm('确认清空日志？')) {
-        localStorage.removeItem('wechat_ai_logs');
+        ['wechat_ai_logs', 'aiMultiChatLogs', 'ai_multi_chat_logs'].forEach(k => localStorage.removeItem(k));
         toast('日志已清空');
     }
 });

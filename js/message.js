@@ -4,24 +4,27 @@
 
 (function (global) {
   // 动态显示打字指示器（注入到聊天内容区底部，像一条真实消息）
-  function showTypingIndicator() {
+  function showTypingIndicator(name, avatar) {
     hideTypingIndicator(); // 先清除已有的
     const chat = appData.chatObjects.find(c => c.id === appData.activeChatId);
     if (!chat) return;
 
+    const displayName = name || chat.name;
+    const displayAvatar = avatar || chat.avatar;
     const avatarHtml = (() => {
-      if (chat.isGroup) {
-        return `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-users"></i></div>`;
+      if (displayAvatar && displayAvatar.type !== 'default' && displayAvatar.url) {
+        return `<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(displayAvatar.url)}" class="w-full h-full object-cover"></div>`;
       }
-      return (chat.avatar && chat.avatar.type !== 'default' && chat.avatar.url)
-        ? `<div class="w-8 h-8 rounded-full mr-3 flex-shrink-0 overflow-hidden"><img src="${escapeHtml(chat.avatar.url)}" class="w-full h-full object-cover"></div>`
-        : `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-robot"></i></div>`;
+      if (chat.isGroup) {
+        return `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-user"></i></div>`;
+      }
+      return `<div class="w-8 h-8 rounded-full bg-wechat-green flex items-center justify-center text-white mr-3 flex-shrink-0"><i class="fa fa-robot"></i></div>`;
     })();
 
     const el = document.createElement('div');
     el.id = 'typingBubble';
     el.className = 'flex items-start mb-6';
-    el.innerHTML = `${avatarHtml}<div class="chat-bubble-ai"><p class="text-sm text-wechat-lightText">${escapeHtml(chat.name)}正在输入<span class="typing-dot-anim"><span></span><span></span><span></span></span></p></div>`;
+    el.innerHTML = `${avatarHtml}<div class="chat-bubble-ai"><p class="text-sm text-wechat-lightText">${escapeHtml(displayName)}正在输入<span class="typing-dot-anim"><span></span><span></span><span></span></span></p></div>`;
 
     DOM.chatPageContainer.appendChild(el);
     setTimeout(() => {

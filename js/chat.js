@@ -163,6 +163,7 @@ async function sendOrRegenerate(contextMessages) {
                     if (aiMessagesCount >= maxAiMessagesPerRun) { logToUI(`[群聊引擎] 第${round}轮中断：AI消息数达到${aiMessagesCount}`); break; }
 
                     const wasMentioned = mentionedMemberIds.has(member.id);
+                    ChatMessageUI.showTypingIndicator(member.name, member.avatar);
                     const memberChatView = {
                         ...chat,
                         systemPrompt: `${member.systemPrompt || `你是${member.name}`}
@@ -189,6 +190,7 @@ ${wasMentioned ? '- 用户刚刚点名了你，本轮必须回应用户，不要
                     });
 
                     const rawContent = await ChatApi.requestChatCompletion({ appData, payload: apiPayload });
+                    ChatMessageUI.hideTypingIndicator();
                     const cleanedContent = cleanAiResponse(rawContent);
                     const normalized = (cleanedContent || '').trim();
                     const isSilent = !normalized || silentSignals.some(s => normalized === s || normalized.includes(s));
