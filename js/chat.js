@@ -82,10 +82,21 @@ async function sendOrRegenerate(contextMessages) {
     try {
         const userName = appData.userInfo.name.trim() || 'user';
 
-        // 群聊：每个成员各自回复（不再使用“群助手”单一回复）
+        // 群聊：多轮接话引擎（随机顺序、逐个读取、全员沉默即停止）
         if (chat.isGroup && Array.isArray(chat.members) && chat.members.length > 0) {
-            // 全员禁言：群成员不响应（防止AI循环对话）
-            if (chat.muted) {
+            if (chat.muted) return;
+
+            const fullText = (chat.messages || []).map(m => `${m.role}:${m.senderName ? `[${m.senderName}]` : ''}${m.content || ''}`).join('\n');
+            const approxTokens = Math.ceil((fullText.length || 0) / 2);
+            if (approxTokens > 50000) {
+                chat.messages.push({
+                    role: 'assistant',
+                    senderName: '系统',
+                    content: '群聊历史内容已超过 5W token，请先清理群聊记录后再继续。',
+                    timestamp: Date.now()
+                });
+                saveDataToStorage();
+                ChatMessageUI.renderChatMessages(chat.messages);
                 return;
             }
 
@@ -100,78 +111,106 @@ async function sendOrRegenerate(contextMessages) {
                 return;
             }
 
-            // 把群消息上下文转换成“谁说了什么”，让每个成员按自己身份理解对话
-            const groupContextMessages = (contextMessages || []).map(m => {
+            const maxRounds = 8;
+            const maxAiMessagesPerRun = 20;
+            const maxDurationMs = 30000;
+            const runStart = Date.now();
+            let aiMessagesCount = 0;
+
+            const toContextMessages = () => (chat.messages || []).map(m => {
                 if (m.role === 'assistant') {
                     const speaker = m.senderName || '群成员';
                     return { role: 'assistant', content: `${speaker}：${m.content}` };
                 }
-                return m;
+                return { role: m.role, content: m.content };
             });
 
-            for (const member of memberChats) {
-                const memberChatView = {
-                    ...chat,
-                    systemPrompt: `${member.systemPrompt || `你是${member.name}`}
+            const shuffle = (arr) => {
+                const a = [...arr];
+                for (let i = a.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [a[i], a[j]] = [a[j], a[i]];
+                }
+                return a;
+            };
+
+            const silentSignals = ['[沉默]', '（沉默）', '(沉默)', '不发言', '保持沉默', 'PASS', 'pass'];
+
+            for (let round = 1; round <= maxRounds; round++) {
+                if (chat.muted) break;
+                if (Date.now() - runStart > maxDurationMs) break;
+                if (aiMessagesCount >= maxAiMessagesPerRun) break;
+
+                let hasAnySpeechInRound = false;
+                const orderedMembers = shuffle(memberChats);
+
+                for (const member of orderedMembers) {
+                    if (chat.muted) break;
+                    if (Date.now() - runStart > maxDurationMs) break;
+                    if (aiMessagesCount >= maxAiMessagesPerRun) break;
+
+                    const memberChatView = {
+                        ...chat,
+                        systemPrompt: `${member.systemPrompt || `你是${member.name}`}
 
 【群聊发言规则】
 - 你正在一个多人群聊中，不是“群助手”。
 - 你只代表“${member.name}”这个成员发言。
-- 先判断这句话是否值得你回应：
-  - 如果你没有必要发言，请只输出：[沉默]
-  - 如果需要发言，再自然回复一句。
+- 你会看到包含其他成员新回复的最新上下文。
+- 如果你没有必要发言，请只输出：[沉默]
+- 如果需要发言，再自然回复一句。
 - 不要代替其他成员发言，不要写“群助手”。`
-                };
-                const apiPayload = ChatApi.buildChatCompletionPayload({
-                    appData,
-                    chat: memberChatView,
-                    contextMessages: groupContextMessages,
-                    nowText: formatMessageTimestamp(Date.now()),
-                    userName
-                });
+                    };
 
-                const rawContent = await ChatApi.requestChatCompletion({ appData, payload: apiPayload });
-                const cleanedContent = cleanAiResponse(rawContent);
-
-                const normalized = (cleanedContent || '').trim();
-                const silentSignals = ['[沉默]', '（沉默）', '(沉默)', '不发言', '保持沉默', 'PASS', 'pass'];
-                if (!normalized || silentSignals.some(s => normalized === s || normalized.includes(s))) {
-                    continue; // 该成员选择不发言
-                }
-
-                const stickerPattern = /:([^:\s]+):/g;
-                const allStickers = cleanedContent.match(stickerPattern) || [];
-                const lastSticker = allStickers.length > 0 ? allStickers[allStickers.length - 1] : null;
-                const validSticker = lastSticker && appData.stickers.find(s => `:${s.name}:` === lastSticker) ? lastSticker : null;
-
-                let textContent = cleanedContent.replace(stickerPattern, '').trim();
-                const firstNewlineIndex = textContent.indexOf('\n');
-                let messageParts = (firstNewlineIndex === -1)
-                    ? [textContent]
-                    : [textContent.substring(0, firstNewlineIndex), textContent.substring(firstNewlineIndex + 1)];
-
-                const finalMessages = messageParts.map(p => p.trim()).filter(p => p !== '');
-                if (validSticker) finalMessages.push(validSticker);
-
-                if (finalMessages.length > 0) {
-                    finalMessages.forEach(part => {
-                        chat.messages.push({
-                            role: 'assistant',
-                            senderName: member.name,
-                            senderId: member.id,
-                            content: part,
-                            timestamp: Date.now()
-                        });
+                    const apiPayload = ChatApi.buildChatCompletionPayload({
+                        appData,
+                        chat: memberChatView,
+                        contextMessages: toContextMessages(),
+                        nowText: formatMessageTimestamp(Date.now()),
+                        userName
                     });
+
+                    const rawContent = await ChatApi.requestChatCompletion({ appData, payload: apiPayload });
+                    const cleanedContent = cleanAiResponse(rawContent);
+                    const normalized = (cleanedContent || '').trim();
+                    if (!normalized || silentSignals.some(s => normalized === s || normalized.includes(s))) {
+                        continue;
+                    }
+
+                    const stickerPattern = /:([^:\s]+):/g;
+                    const allStickers = cleanedContent.match(stickerPattern) || [];
+                    const lastSticker = allStickers.length > 0 ? allStickers[allStickers.length - 1] : null;
+                    const validSticker = lastSticker && appData.stickers.find(s => `:${s.name}:` === lastSticker) ? lastSticker : null;
+
+                    let textContent = cleanedContent.replace(stickerPattern, '').trim();
+                    const firstNewlineIndex = textContent.indexOf('\n');
+                    let messageParts = (firstNewlineIndex === -1)
+                        ? [textContent]
+                        : [textContent.substring(0, firstNewlineIndex), textContent.substring(firstNewlineIndex + 1)];
+
+                    const finalMessages = messageParts.map(p => p.trim()).filter(p => p !== '');
+                    if (validSticker) finalMessages.push(validSticker);
+
+                    if (finalMessages.length > 0) {
+                        finalMessages.forEach(part => {
+                            chat.messages.push({
+                                role: 'assistant',
+                                senderName: member.name,
+                                senderId: member.id,
+                                content: part,
+                                timestamp: Date.now()
+                            });
+                            aiMessagesCount++;
+                        });
+                        hasAnySpeechInRound = true;
+                        saveDataToStorage();
+                        ChatMessageUI.renderChatMessages(chat.messages);
+                    }
                 }
+
+                if (!hasAnySpeechInRound) break;
             }
 
-            saveDataToStorage();
-            ChatMessageUI.renderChatMessages(chat.messages);
-
-            if (typeof checkAndTriggerDiaryGeneration === 'function') {
-                checkAndTriggerDiaryGeneration(chat);
-            }
             return;
         }
 

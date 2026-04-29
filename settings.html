@@ -250,6 +250,11 @@
                 <button class="action-btn action-red" id="clearLogsBtn"><i class="fa fa-eraser"></i> 清空日志</button>
             </div>
         </div>
+        <div class="settings-item">
+            <div class="action-row">
+                <button class="action-btn action-red" id="clearChatsBtn"><i class="fa fa-trash"></i> 清空聊天记录</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -434,7 +439,7 @@ function compressImg(file, maxSize, quality, cb) {
 // 备份/恢复/日志（外置设置页可直接使用）
 function collectBackupPayload() {
     const keys = [
-        'aiMultiChatData',
+        'aiMultiChatObjects',
         'aiMultiChatActiveId',
         'wechat_ai_logs',
         'wechat_moments_data',
@@ -515,6 +520,13 @@ document.getElementById('clearLogsBtn').addEventListener('click', () => {
         localStorage.removeItem('wechat_ai_logs');
         toast('日志已清空');
     }
+});
+
+document.getElementById('clearChatsBtn').addEventListener('click', () => {
+    if (!confirm('确认清空所有聊天记录？此操作不可撤销。')) return;
+    localStorage.removeItem('aiMultiChatObjects');
+    localStorage.removeItem('aiMultiChatActiveId');
+    toast('聊天记录已清空，请刷新页面');
 });
 
 loadSettings();

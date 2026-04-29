@@ -4,6 +4,9 @@
 
 // 检查并触发日记生成
 async function checkAndTriggerDiaryGeneration(chat) {
+    // 群聊不生成日记，也不保留长期记忆摘要
+    if (chat?.isGroup) return;
+
     logToUI('自动总结检查: 开始。');
     if (appData.isGeneratingDiary) {
         logToUI("自动总结检查: 检测到已有任务在运行，跳过。");

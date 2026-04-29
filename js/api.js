@@ -9,7 +9,8 @@
   }
 
   function buildChatCompletionPayload({ appData, chat, contextMessages, nowText, userName }) {
-    const diarySummary = (chat.diaries || []).map(d => `[过往日记摘要]:\n${d.content}`).join('\n\n');
+    const isGroupChat = !!chat?.isGroup;
+    const diarySummary = isGroupChat ? '' : (chat.diaries || []).map(d => `[过往日记摘要]:\n${d.content}`).join('\n\n');
     const longTermMemoryContext = diarySummary
       ? `这是你和用户之间过往的对话摘要，请将此作为你的长期记忆：\n${diarySummary}\n\n`
       : '';
@@ -26,7 +27,8 @@
 
     const systemPrompt = `${longTermMemoryContext}${appData.apiConfig.globalSystemPrompt}\n\n${chat.systemPrompt}${stickerHint}`.trim();
 
-    const apiMessages = getHistoryForApi(contextMessages, appData.apiConfig.historyTurns).map(m => ({
+    const historyTurns = isGroupChat ? 0 : appData.apiConfig.historyTurns;
+    const apiMessages = getHistoryForApi(contextMessages, historyTurns).map(m => ({
       role: m.role === 'user' ? 'user' : 'assistant',
       name: m.role === 'user' ? userName : undefined,
       content: m.content
