@@ -255,6 +255,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="js/utils.js"></script>
 <script>
 // ==================== 读写设置共用同一套localStorage Key ====================
 // 这些Key名称必须和wechat里app.js 用的完全一致
@@ -431,18 +432,184 @@ function compressImg(file, maxSize, quality, cb) {
     reader.readAsDataURL(file);
 }
 
-// 备份/恢复/日志（外置设置页只提示回到微信页面，避免破坏原 ZIP 恢复流程）
-document.getElementById('backupBtn').addEventListener('click', () => {
-    toast('请在微信页面内使用原备份功能');
-});
+// 备份/恢复/日志（外置设置页使用原 ZIP 格式，支持按聊天对象选择恢复）
+async function backupZipData() {
+    try {
+        await loadJSZip();
+        const zip = new JSZip();
+        const globalsFolder = zip.folder('_globals');
+        const apiConfig = JSON.parse(localStorage.getItem('aiMultiChatApiConfig') || '{}');
+        const userInfo = JSON.parse(localStorage.getItem('aiMultiChatUserInfo') || '{"name":"user"}');
+        globalsFolder.file('settings.json', JSON.stringify({ apiConfig, userInfo: { name: userInfo.name || 'user' } }, null, 2));
 
-document.getElementById('restoreFileInput').addEventListener('change', (e) => {
-    e.target.value = '';
-    toast('请在微信页面内使用原恢复功能');
-});
+        const stickers = JSON.parse(localStorage.getItem('aiMultiChatStickers') || '[]');
+        if (stickers.length) globalsFolder.file('stickers.json', JSON.stringify(stickers, null, 2));
+        const moments = JSON.parse(localStorage.getItem('aiMultiChatMoments') || '[]');
+        if (moments.length) globalsFolder.file('moments.json', JSON.stringify(moments, null, 2));
+        const npcFriends = JSON.parse(localStorage.getItem('aiMultiChatNpcFriends') || '[]');
+        if (npcFriends.length) globalsFolder.file('npcFriends.json', JSON.stringify(npcFriends, null, 2));
+
+        if (userInfo.avatar && userInfo.avatar.type !== 'default' && userInfo.avatar.url) {
+            try {
+                const avatarBlob = userInfo.avatar.url.startsWith('data:image') ? dataURLtoBlob(userInfo.avatar.url) : await (await fetch(userInfo.avatar.url)).blob();
+                const extension = avatarBlob.type.split('/')[1] || 'png';
+                globalsFolder.file(`user_avatar.${extension}`, avatarBlob);
+            } catch(e) { console.warn('备份用户头像失败', e); }
+        }
+
+        const chats = JSON.parse(localStorage.getItem('aiMultiChatObjects') || '[]');
+        for (const chat of chats) {
+            const chatFolder = zip.folder(chat.id);
+            const chatDataToSave = {
+                id: chat.id,
+                name: chat.name,
+                systemPrompt: chat.systemPrompt,
+                messages: chat.messages || [],
+                diaries: chat.diaries || [],
+                lastDiaryIndex: chat.lastDiaryIndex || 0,
+                createdAt: chat.createdAt,
+                isGroup: !!chat.isGroup,
+                members: chat.members || [],
+                muted: !!chat.muted,
+                avatar: chat.avatar || { type: 'default', url: '' }
+            };
+            chatFolder.file('history.json', JSON.stringify(chatDataToSave, null, 2));
+            if (chat.avatar && chat.avatar.type !== 'default' && chat.avatar.url) {
+                try {
+                    const avatarBlob = chat.avatar.url.startsWith('data:image') ? dataURLtoBlob(chat.avatar.url) : await (await fetch(chat.avatar.url)).blob();
+                    const extension = avatarBlob.type.split('/')[1] || 'png';
+                    chatFolder.file(`avatar.${extension}`, avatarBlob);
+                    chatDataToSave.avatar = { type: 'upload', url: '' };
+                } catch(e) { console.warn(`备份聊天头像失败：${chat.name}`, e); }
+            }
+        }
+
+        const content = await zip.generateAsync({ type: 'blob' });
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[-T:]/g, '');
+        const filename = `WeChat-AI-Backup-${timestamp}.zip`;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(content);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+        toast(`备份成功：${filename}`);
+    } catch (e) {
+        toast('备份失败：' + (e?.message || e));
+    }
+}
+
+async function handleExternalRestoreFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+        await loadJSZip();
+        const zip = await JSZip.loadAsync(file);
+        window.externalRestoreZip = zip;
+        const parsedChats = [];
+        const directories = Object.keys(zip.files).filter(path => path.endsWith('/') && path.indexOf('/') === path.length - 1);
+        for (const dirPath of directories) {
+            if (dirPath === '_globals/') continue;
+            const historyFile = zip.file(`${dirPath}history.json`);
+            if (historyFile) {
+                const chatData = JSON.parse(await historyFile.async('string'));
+                parsedChats.push({ id: chatData.id, name: chatData.name || chatData.id });
+            }
+        }
+        if (!parsedChats.length) { toast('备份文件里没有找到聊天记录'); return; }
+        showExternalRestoreModal(parsedChats);
+    } catch (err) {
+        toast('恢复文件解析失败：' + (err?.message || err));
+    } finally {
+        e.target.value = '';
+    }
+}
+
+function showExternalRestoreModal(chats) {
+    const html = `<div id="externalRestoreModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;display:flex;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:12px;width:90%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;">
+            <div style="padding:16px;border-bottom:1px solid #eee;font-weight:600;">从备份恢复</div>
+            <div style="padding:16px;overflow:auto;max-height:50vh;">
+                <div style="font-size:13px;color:#666;margin-bottom:10px;">选择要恢复的聊天对象：</div>
+                ${chats.map(c => `<label style="display:flex;gap:8px;align-items:center;padding:8px 0;"><input type="checkbox" class="external-restore-chat" data-chat-id="${escapeHtml(c.id)}"><span>${escapeHtml(c.name)}</span></label>`).join('')}
+            </div>
+            <div style="padding:16px;border-top:1px solid #eee;display:flex;gap:10px;">
+                <button id="externalRestoreCancel" class="action-btn" style="flex:1;">取消</button>
+                <button id="externalRestoreConfirm" class="action-btn action-green" style="flex:1;">确认恢复</button>
+            </div>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+    document.getElementById('externalRestoreCancel').onclick = closeExternalRestoreModal;
+    document.getElementById('externalRestoreConfirm').onclick = confirmExternalRestore;
+}
+
+function closeExternalRestoreModal() {
+    document.getElementById('externalRestoreModal')?.remove();
+    window.externalRestoreZip = null;
+}
+
+async function confirmExternalRestore() {
+    const selectedIds = [...document.querySelectorAll('.external-restore-chat:checked')].map(cb => cb.dataset.chatId);
+    if (!selectedIds.length) { toast('请至少选择一个聊天对象'); return; }
+    const zip = window.externalRestoreZip;
+    if (!zip) return;
+    try {
+        const settingsFile = zip.file('_globals/settings.json');
+        if (settingsFile) {
+            const { apiConfig, userInfo } = JSON.parse(await settingsFile.async('string'));
+            if (apiConfig) localStorage.setItem('aiMultiChatApiConfig', JSON.stringify(apiConfig));
+            if (userInfo) {
+                const existingUser = JSON.parse(localStorage.getItem('aiMultiChatUserInfo') || '{"name":"user","avatar":{"type":"default","url":""}}');
+                localStorage.setItem('aiMultiChatUserInfo', JSON.stringify({ ...existingUser, name: userInfo.name || existingUser.name }));
+            }
+        }
+        const stickersFile = zip.file('_globals/stickers.json');
+        if (stickersFile) localStorage.setItem('aiMultiChatStickers', await stickersFile.async('string'));
+        const momentsFile = zip.file('_globals/moments.json');
+        if (momentsFile) localStorage.setItem('aiMultiChatMoments', await momentsFile.async('string'));
+        const npcFriendsFile = zip.file('_globals/npcFriends.json');
+        if (npcFriendsFile) localStorage.setItem('aiMultiChatNpcFriends', await npcFriendsFile.async('string'));
+
+        const currentChats = JSON.parse(localStorage.getItem('aiMultiChatObjects') || '[]');
+        for (const chatId of selectedIds) {
+            const chatDir = `${chatId}/`;
+            const historyFile = zip.file(`${chatDir}history.json`);
+            if (!historyFile) continue;
+            const chatData = JSON.parse(await historyFile.async('string'));
+            const chatAvatarFile = zip.file(new RegExp(`^${chatDir}avatar\\.(png|jpg|jpeg|gif|webp)$`))[0];
+            if (chatAvatarFile) {
+                const avatarBlob = await chatAvatarFile.async('blob');
+                chatData.avatar = { type: 'upload', url: await blobToDataURL(avatarBlob) };
+            } else {
+                chatData.avatar = chatData.avatar || { type: 'default', url: '' };
+            }
+            chatData.messages = chatData.messages || [];
+            chatData.diaries = chatData.diaries || [];
+            chatData.lastDiaryIndex = chatData.lastDiaryIndex || 0;
+            const idx = currentChats.findIndex(c => c.id === chatId);
+            if (idx >= 0) currentChats[idx] = chatData;
+            else currentChats.push(chatData);
+        }
+        localStorage.setItem('aiMultiChatObjects', JSON.stringify(currentChats));
+        toast(`成功恢复 ${selectedIds.length} 个聊天，请刷新页面`);
+        closeExternalRestoreModal();
+    } catch (err) {
+        toast('恢复失败：' + (err?.message || err));
+    }
+}
+
+document.getElementById('backupBtn').addEventListener('click', backupZipData);
+document.getElementById('restoreFileInput').addEventListener('change', handleExternalRestoreFile);
 
 document.getElementById('viewLogsBtn').addEventListener('click', () => {
-    toast('请在微信页面内查看日志');
+    const logs = localStorage.getItem('wechat_ai_logs');
+    if (!logs) { toast('暂无日志'); return; }
+    const w = window.open('', '_blank');
+    if (!w) { toast('无法打开日志窗口，请检查浏览器拦截'); return; }
+    w.document.write(`<pre style="white-space:pre-wrap;word-break:break-word;padding:16px;font-family:ui-monospace,monospace;">${String(logs).replace(/[&<>]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[s]))}</pre>`);
+    w.document.close();
 });
 
 document.getElementById('clearLogsBtn').addEventListener('click', () => {
