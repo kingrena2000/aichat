@@ -137,6 +137,13 @@ function logToUI(message) {
     if (typeof appData !== 'undefined' && appData.logs) {
         appData.logs.push(logEntry);
     }
+    try {
+        const oldLogs = localStorage.getItem('wechat_ai_logs') || '';
+        const nextLogs = oldLogs ? `${oldLogs}\n${logEntry}` : logEntry;
+        localStorage.setItem('wechat_ai_logs', nextLogs.slice(-200000));
+    } catch (e) {
+        console.warn('写入诊断日志失败:', e);
+    }
     console.log(message);
 }
 
