@@ -140,6 +140,7 @@ window.DOM = {
     editChatSystemPrompt: document.getElementById('editChatSystemPrompt'),
     saveChatDetailBtn: document.getElementById('saveChatDetailBtn'),
     toggleGroupMuteBtn: document.getElementById('toggleGroupMuteBtn'),
+    clearGroupMessagesBtn: document.getElementById('clearGroupMessagesBtn'),
     dissolveGroupBtn: document.getElementById('dissolveGroupBtn'),
     
     // 确认删除模态框
@@ -514,6 +515,7 @@ function setupEventListeners() {
         editChatAvatarUrlCancel: { click: () => DOM.editChatAvatarUrlContainer.classList.add('hidden') },
         saveChatDetailBtn: { click: saveChatDetail },
         toggleGroupMuteBtn: { click: () => { if (typeof toggleGroupMute === 'function') toggleGroupMute(); } },
+        clearGroupMessagesBtn: { click: () => { if (typeof clearGroupMessages === 'function') clearGroupMessages(); } },
         dissolveGroupBtn: { click: () => { if (typeof dissolveGroup === 'function') dissolveGroup(); } },
         cancelDeleteBtn: { click: hideConfirmDeleteModal },
         confirmDeleteBtn: { click: () => { if (appData.editChatTempData.chatId) deleteChat(appData.editChatTempData.chatId) } },

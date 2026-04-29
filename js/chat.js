@@ -135,6 +135,14 @@ async function sendOrRegenerate(contextMessages) {
             };
 
             const silentSignals = ['[沉默]', '（沉默）', '(沉默)', '不发言', '保持沉默', 'PASS', 'pass'];
+            const extractMentionedMemberIds = () => {
+                const lastUserMessage = [...(chat.messages || [])].reverse().find(m => m.role === 'user');
+                const text = lastUserMessage?.content || '';
+                return new Set(memberChats
+                    .filter(member => member.name && text.includes(member.name))
+                    .map(member => member.id));
+            };
+            const mentionedMemberIds = extractMentionedMemberIds();
 
             for (let round = 1; round <= maxRounds; round++) {
                 if (chat.muted) break;
@@ -149,6 +157,7 @@ async function sendOrRegenerate(contextMessages) {
                     if (Date.now() - runStart > maxDurationMs) break;
                     if (aiMessagesCount >= maxAiMessagesPerRun) break;
 
+                    const wasMentioned = mentionedMemberIds.has(member.id);
                     const memberChatView = {
                         ...chat,
                         systemPrompt: `${member.systemPrompt || `你是${member.name}`}
@@ -157,6 +166,7 @@ async function sendOrRegenerate(contextMessages) {
 - 你正在一个多人群聊中，不是“群助手”。
 - 你只代表“${member.name}”这个成员发言。
 - 你会看到包含其他成员新回复的最新上下文。
+${wasMentioned ? '- 用户刚刚点名了你，本轮必须回应用户，不要沉默。\n' : ''}- 如果用户点名了你，请优先回应，不要沉默。
 - 如果你没有必要发言，请只输出：[沉默]
 - 如果需要发言，再自然回复一句。
 - 不要代替其他成员发言，不要写“群助手”。`
@@ -173,7 +183,8 @@ async function sendOrRegenerate(contextMessages) {
                     const rawContent = await ChatApi.requestChatCompletion({ appData, payload: apiPayload });
                     const cleanedContent = cleanAiResponse(rawContent);
                     const normalized = (cleanedContent || '').trim();
-                    if (!normalized || silentSignals.some(s => normalized === s || normalized.includes(s))) {
+                    const isSilent = !normalized || silentSignals.some(s => normalized === s || normalized.includes(s));
+                    if (isSilent) {
                         continue;
                     }
 

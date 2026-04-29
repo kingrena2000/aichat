@@ -134,12 +134,14 @@
     const singlePromptSection = document.getElementById('singlePromptSection');
     const groupMembersSection = document.getElementById('groupMembersSection');
     const dissolveGroupBtn = document.getElementById('dissolveGroupBtn');
+    const clearGroupMessagesBtn = document.getElementById('clearGroupMessagesBtn');
     const editGroupMemberList = document.getElementById('editGroupMemberList');
 
     if (c.isGroup) {
       singlePromptSection?.classList.add('hidden');
       groupMembersSection?.classList.remove('hidden');
       dissolveGroupBtn?.classList.remove('hidden');
+      clearGroupMessagesBtn?.classList.remove('hidden');
       const toggleGroupMuteBtn = document.getElementById('toggleGroupMuteBtn');
       toggleGroupMuteBtn?.classList.remove('hidden');
       if (toggleGroupMuteBtn) {
@@ -166,6 +168,7 @@
       singlePromptSection?.classList.remove('hidden');
       groupMembersSection?.classList.add('hidden');
       dissolveGroupBtn?.classList.add('hidden');
+      clearGroupMessagesBtn?.classList.add('hidden');
       const toggleGroupMuteBtn = document.getElementById('toggleGroupMuteBtn');
       toggleGroupMuteBtn?.classList.add('hidden');
     }
@@ -338,5 +341,20 @@
 
     const btn = document.getElementById('toggleGroupMuteBtn');
     if (btn) btn.textContent = c.muted ? '关闭全员禁言' : '开启全员禁言';
+  };
+
+  global.clearGroupMessages = function clearGroupMessages() {
+    const id = appData.editChatTempData?.chatId;
+    if (!id) return;
+    const c = appData.chatObjects.find(chat => chat.id === id);
+    if (!c || !c.isGroup) return;
+    if (!confirm(`确定要清空群聊「${c.name}」的全部聊天记录吗？此操作不可撤销。`)) return;
+
+    c.messages = [];
+    saveDataToStorage();
+    if (appData.activeChatId === id) {
+      ChatMessageUI.renderChatMessages(c.messages);
+    }
+    DOM.chatDetailPage.classList.add('translate-x-full');
   };
 })(window);

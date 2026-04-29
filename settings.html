@@ -250,11 +250,6 @@
                 <button class="action-btn action-red" id="clearLogsBtn"><i class="fa fa-eraser"></i> 清空日志</button>
             </div>
         </div>
-        <div class="settings-item">
-            <div class="action-row">
-                <button class="action-btn action-red" id="clearChatsBtn"><i class="fa fa-trash"></i> 清空聊天记录</button>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -436,83 +431,18 @@ function compressImg(file, maxSize, quality, cb) {
     reader.readAsDataURL(file);
 }
 
-// 备份/恢复/日志（外置设置页可直接使用）
-function collectBackupPayload() {
-    const keys = [
-        'aiMultiChatObjects',
-        'aiMultiChatActiveId',
-        'wechat_ai_logs',
-        'wechat_moments_data',
-        'wechat_npc_friends',
-        'wechat_moments_comments',
-        'wechat_moments_likes'
-    ];
-    const localStorageData = {};
-    keys.forEach(k => {
-        const v = localStorage.getItem(k);
-        if (v !== null) localStorageData[k] = v;
-    });
-    return {
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        source: 'settings.html',
-        localStorageData
-    };
-}
-
-function downloadJsonBackup(payload) {
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
-    const a = document.createElement('a');
-    const ts = new Date().toISOString().replace(/[:.]/g, '-');
-    a.href = URL.createObjectURL(blob);
-    a.download = `aichat-backup-${ts}.json`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-        URL.revokeObjectURL(a.href);
-        a.remove();
-    }, 200);
-}
-
+// 备份/恢复/日志（外置设置页只提示回到微信页面，避免破坏原 ZIP 恢复流程）
 document.getElementById('backupBtn').addEventListener('click', () => {
-    try {
-        const payload = collectBackupPayload();
-        downloadJsonBackup(payload);
-        toast('备份成功（JSON）');
-    } catch (e) {
-        toast('备份失败：' + (e?.message || e));
-    }
+    toast('请在微信页面内使用原备份功能');
 });
 
-document.getElementById('restoreFileInput').addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-        const text = await file.text();
-        const data = JSON.parse(text);
-        const kv = data?.localStorageData;
-        if (!kv || typeof kv !== 'object') throw new Error('备份文件格式不正确');
-        Object.entries(kv).forEach(([k, v]) => {
-            if (typeof v === 'string') localStorage.setItem(k, v);
-        });
-        toast('恢复成功，请刷新页面');
-    } catch (err) {
-        toast('恢复失败：' + (err?.message || err));
-    } finally {
-        e.target.value = '';
-    }
+document.getElementById('restoreFileInput').addEventListener('change', (e) => {
+    e.target.value = '';
+    toast('请在微信页面内使用原恢复功能');
 });
 
 document.getElementById('viewLogsBtn').addEventListener('click', () => {
-    const logs = localStorage.getItem('wechat_ai_logs');
-    if (!logs) {
-        toast('暂无日志');
-        return;
-    }
-    const w = window.open('', '_blank');
-    if (!w) { toast('无法打开日志窗口，请检查浏览器拦截'); return; }
-    w.document.write(`<pre style="white-space:pre-wrap;word-break:break-word;padding:16px;font-family:ui-monospace,monospace;">${String(logs).replace(/[&<>]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[s]))}</pre>`);
-    w.document.close();
+    toast('请在微信页面内查看日志');
 });
 
 document.getElementById('clearLogsBtn').addEventListener('click', () => {
@@ -522,12 +452,6 @@ document.getElementById('clearLogsBtn').addEventListener('click', () => {
     }
 });
 
-document.getElementById('clearChatsBtn').addEventListener('click', () => {
-    if (!confirm('确认清空所有聊天记录？此操作不可撤销。')) return;
-    localStorage.removeItem('aiMultiChatObjects');
-    localStorage.removeItem('aiMultiChatActiveId');
-    toast('聊天记录已清空，请刷新页面');
-});
 
 loadSettings();
 </script>
