@@ -112,9 +112,9 @@ async function sendOrRegenerate(contextMessages) {
                 return;
             }
 
-            const maxRounds = 8;
-            const maxAiMessagesPerRun = 20;
-            const maxDurationMs = 180000;
+            const maxRounds = 3;
+            const maxAiMessagesPerRun = 12;
+            const maxDurationMs = 120000;
             const runStart = Date.now();
             let aiMessagesCount = 0;
 
@@ -171,13 +171,12 @@ async function sendOrRegenerate(contextMessages) {
 - 你正在一个多人群聊中，不是“群助手”。
 - 你只代表“${member.name}”这个成员发言。
 - 你会看到群聊上下文，但其他成员的话只是上下文，不是你的发言，也不是你的人设。
-- 如果上一条是其他成员的发言，你可以像真实群聊一样自然接话、回应、补充或打趣。
+- 用户说过的话只属于用户，严禁复述成自己的经历、动作、承诺或台词。
+- 如果上一条是其他成员的发言，你可以像真实群聊一样自然接话、回应、补充或打趣；如果没有必要接话，就沉默。
 - 不要只回答用户第一句话，也要关注群里最新一条消息。
-- 第一轮中，如果用户点名了所有人，每个被点名成员都必须各自回应一次。
-- 严禁模仿、续写、代替其他成员；只能用“${member.name}”自己的人设和口吻回应。
-${wasMentioned ? '- 用户刚刚点名了你，本轮必须回应用户，不要沉默。\n' : ''}- 如果用户点名了你，请优先回应，不要沉默。
-- 如果你没有必要发言，请只输出：[沉默]
-- 如果需要发言，再自然回复一句。
+- 严禁模仿、续写、代替其他成员或用户；只能用“${member.name}”自己的人设和口吻回应。
+${wasMentioned && round === 1 ? '- 用户刚刚点名了你，第一轮请简短回应一次；后续轮次没有必要就沉默。\n' : ''}- 如果没有明确要补充的新内容，请只输出：[沉默]
+- 如果需要发言，控制在1-2句，不要长篇独白。
 - 不要在回复前加名字，不要写“${member.name}：”，不要写“群助手”。`
                     };
 
@@ -193,7 +192,8 @@ ${wasMentioned ? '- 用户刚刚点名了你，本轮必须回应用户，不要
                     ChatMessageUI.hideTypingIndicator();
                     const cleanedContent = cleanAiResponse(rawContent);
                     const normalized = (cleanedContent || '').trim();
-                    const isSilent = !normalized || silentSignals.some(s => normalized === s || normalized.includes(s));
+                    const setupPattern = /please\s+do\s+the\s+setup\s+first|\/set\b/i;
+                    const isSilent = !normalized || setupPattern.test(normalized) || silentSignals.some(s => normalized === s || normalized.includes(s));
                     if (isSilent) {
                         logToUI(`[群聊引擎] 第${round}轮 ${member.name}：沉默，原始=${JSON.stringify(rawContent).slice(0, 120)}`);
                         continue;
