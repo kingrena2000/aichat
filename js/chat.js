@@ -84,7 +84,8 @@ async function sendOrRegenerate(contextMessages) {
 
         // 群聊：多轮接话引擎（随机顺序、逐个读取、全员沉默即停止）
         if (chat.isGroup && Array.isArray(chat.members) && chat.members.length > 0) {
-            if (chat.muted) return;
+            logToUI(`[群聊引擎] 启动：${chat.name}，消息数=${chat.messages?.length || 0}`);
+            if (chat.muted) { logToUI('[群聊引擎] 终止：全员禁言'); return; }
 
             const fullText = (chat.messages || []).map(m => `${m.role}:${m.senderName ? `[${m.senderName}]` : ''}${m.content || ''}`).join('\n');
             const approxTokens = Math.ceil((fullText.length || 0) / 2);
@@ -145,19 +146,21 @@ async function sendOrRegenerate(contextMessages) {
                     .map(member => member.id));
             };
             const mentionedMemberIds = extractMentionedMemberIds();
+            logToUI(`[群聊引擎] 成员=${memberChats.map(m => m.name).join('、')}；被点名=${memberChats.filter(m => mentionedMemberIds.has(m.id)).map(m => m.name).join('、') || '无'}`);
 
             for (let round = 1; round <= maxRounds; round++) {
-                if (chat.muted) break;
-                if (Date.now() - runStart > maxDurationMs) break;
-                if (aiMessagesCount >= maxAiMessagesPerRun) break;
+                if (chat.muted) { logToUI(`[群聊引擎] 第${round}轮前终止：全员禁言`); break; }
+                if (Date.now() - runStart > maxDurationMs) { logToUI(`[群聊引擎] 第${round}轮前终止：超过${maxDurationMs}ms`); break; }
+                if (aiMessagesCount >= maxAiMessagesPerRun) { logToUI(`[群聊引擎] 第${round}轮前终止：AI消息数达到${aiMessagesCount}`); break; }
 
                 let hasAnySpeechInRound = false;
                 const orderedMembers = shuffle(memberChats);
+                logToUI(`[群聊引擎] 第${round}轮开始，顺序=${orderedMembers.map(m => m.name).join(' → ')}`);
 
                 for (const member of orderedMembers) {
-                    if (chat.muted) break;
-                    if (Date.now() - runStart > maxDurationMs) break;
-                    if (aiMessagesCount >= maxAiMessagesPerRun) break;
+                    if (chat.muted) { logToUI(`[群聊引擎] 第${round}轮中断：全员禁言`); break; }
+                    if (Date.now() - runStart > maxDurationMs) { logToUI(`[群聊引擎] 第${round}轮中断：超过${maxDurationMs}ms`); break; }
+                    if (aiMessagesCount >= maxAiMessagesPerRun) { logToUI(`[群聊引擎] 第${round}轮中断：AI消息数达到${aiMessagesCount}`); break; }
 
                     const wasMentioned = mentionedMemberIds.has(member.id);
                     const memberChatView = {
@@ -190,8 +193,10 @@ ${wasMentioned ? '- 用户刚刚点名了你，本轮必须回应用户，不要
                     const normalized = (cleanedContent || '').trim();
                     const isSilent = !normalized || silentSignals.some(s => normalized === s || normalized.includes(s));
                     if (isSilent) {
+                        logToUI(`[群聊引擎] 第${round}轮 ${member.name}：沉默，原始=${JSON.stringify(rawContent).slice(0, 120)}`);
                         continue;
                     }
+                    logToUI(`[群聊引擎] 第${round}轮 ${member.name}：发言=${normalized.slice(0, 120)}`);
 
                     const stickerPattern = /:([^:\s]+):/g;
                     const allStickers = cleanedContent.match(stickerPattern) || [];
@@ -224,9 +229,14 @@ ${wasMentioned ? '- 用户刚刚点名了你，本轮必须回应用户，不要
                     }
                 }
 
-                if (!hasAnySpeechInRound) break;
+                if (!hasAnySpeechInRound) {
+                    logToUI(`[群聊引擎] 第${round}轮结束：全员沉默，run停止`);
+                    break;
+                }
+                logToUI(`[群聊引擎] 第${round}轮结束：有人发言，继续下一轮；累计AI消息=${aiMessagesCount}`);
             }
 
+            logToUI(`[群聊引擎] run结束：累计AI消息=${aiMessagesCount}，耗时=${Date.now() - runStart}ms`);
             return;
         }
 
