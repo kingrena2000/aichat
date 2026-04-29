@@ -117,13 +117,15 @@ async function sendOrRegenerate(contextMessages) {
             const runStart = Date.now();
             let aiMessagesCount = 0;
 
-            const toContextMessages = () => (chat.messages || []).map(m => {
-                if (m.role === 'assistant') {
-                    const speaker = m.senderName || '群成员';
-                    return { role: 'assistant', content: `${speaker}：${m.content}` };
-                }
-                return { role: m.role, content: m.content };
-            });
+            const toContextMessages = () => [{
+                role: 'user',
+                content: `【群聊记录】\n${(chat.messages || []).map(m => {
+                    if (m.role === 'assistant') {
+                        return `${m.senderName || '群成员'}：${m.content || ''}`;
+                    }
+                    return `${userName}：${m.content || ''}`;
+                }).join('\n')}`
+            }];
 
             const shuffle = (arr) => {
                 const a = [...arr];
@@ -166,6 +168,8 @@ async function sendOrRegenerate(contextMessages) {
 - 你正在一个多人群聊中，不是“群助手”。
 - 你只代表“${member.name}”这个成员发言。
 - 你会看到群聊上下文，但其他成员的话只是上下文，不是你的发言，也不是你的人设。
+- 如果上一条是其他成员的发言，你可以像真实群聊一样自然接话、回应、补充或打趣。
+- 不要只回答用户第一句话，也要关注群里最新一条消息。
 - 严禁模仿、续写、代替其他成员；只能用“${member.name}”自己的人设和口吻回应。
 ${wasMentioned ? '- 用户刚刚点名了你，本轮必须回应用户，不要沉默。\n' : ''}- 如果用户点名了你，请优先回应，不要沉默。
 - 如果你没有必要发言，请只输出：[沉默]

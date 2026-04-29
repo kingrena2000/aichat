@@ -42,7 +42,7 @@ function escapeHtmlWithBreaks(u) {
 
 // 清理AI回复中的 <think> 标签（用于深度思考模型）
 function cleanAiResponse(raw) {
-    return (raw.replace(/<think>[\s\S]*?<\/think>/g, '').trim()) || "";
+    return (String(raw || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim()) || "";
 }
 
 // API Key 混淆存储（防裸读，非加密）
