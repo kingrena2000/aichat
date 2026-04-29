@@ -114,7 +114,7 @@ async function sendOrRegenerate(contextMessages) {
 
             const maxRounds = 8;
             const maxAiMessagesPerRun = 20;
-            const maxDurationMs = 30000;
+            const maxDurationMs = 180000;
             const runStart = Date.now();
             let aiMessagesCount = 0;
 
@@ -159,7 +159,6 @@ async function sendOrRegenerate(contextMessages) {
 
                 for (const member of orderedMembers) {
                     if (chat.muted) { logToUI(`[群聊引擎] 第${round}轮中断：全员禁言`); break; }
-                    if (Date.now() - runStart > maxDurationMs) { logToUI(`[群聊引擎] 第${round}轮中断：超过${maxDurationMs}ms`); break; }
                     if (aiMessagesCount >= maxAiMessagesPerRun) { logToUI(`[群聊引擎] 第${round}轮中断：AI消息数达到${aiMessagesCount}`); break; }
 
                     const wasMentioned = mentionedMemberIds.has(member.id);
@@ -174,6 +173,7 @@ async function sendOrRegenerate(contextMessages) {
 - 你会看到群聊上下文，但其他成员的话只是上下文，不是你的发言，也不是你的人设。
 - 如果上一条是其他成员的发言，你可以像真实群聊一样自然接话、回应、补充或打趣。
 - 不要只回答用户第一句话，也要关注群里最新一条消息。
+- 第一轮中，如果用户点名了所有人，每个被点名成员都必须各自回应一次。
 - 严禁模仿、续写、代替其他成员；只能用“${member.name}”自己的人设和口吻回应。
 ${wasMentioned ? '- 用户刚刚点名了你，本轮必须回应用户，不要沉默。\n' : ''}- 如果用户点名了你，请优先回应，不要沉默。
 - 如果你没有必要发言，请只输出：[沉默]
